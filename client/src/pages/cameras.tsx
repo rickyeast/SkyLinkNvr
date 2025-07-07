@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AddCameraDialog } from "@/components/camera/add-camera-dialog";
 import { useCameras } from "@/hooks/use-cameras";
 import { Plus, Settings, Trash2, Wifi } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,10 +53,12 @@ export default function Cameras() {
               <Wifi className="w-4 h-4 mr-2" />
               Discover
             </Button>
-            <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Camera
-            </Button>
+            <AddCameraDialog>
+              <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Camera
+              </Button>
+            </AddCameraDialog>
           </div>
         </div>
       </header>
@@ -68,10 +71,12 @@ export default function Cameras() {
               <p className="text-gray-500 text-sm mt-2 mb-4">
                 Add your first camera to start monitoring
               </p>
-              <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Camera
-              </Button>
+              <AddCameraDialog>
+                <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Camera
+                </Button>
+              </AddCameraDialog>
             </CardContent>
           </Card>
         ) : (

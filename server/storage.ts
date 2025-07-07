@@ -77,7 +77,7 @@ export class DatabaseStorage implements IStorage {
   async updateCamera(id: number, camera: Partial<InsertCamera>): Promise<Camera | undefined> {
     const [updated] = await db
       .update(cameras)
-      .set({ ...camera, updatedAt: new Date() })
+      .set({ ...camera, updatedAt: new Date() } as any)
       .where(eq(cameras.id, id))
       .returning();
     return updated || undefined;
@@ -85,15 +85,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCamera(id: number): Promise<boolean> {
     const result = await db.delete(cameras).where(eq(cameras.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async updateCameraStatus(id: number, status: string): Promise<boolean> {
     const result = await db
       .update(cameras)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, updatedAt: new Date() } as any)
       .where(eq(cameras.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // Recordings
@@ -126,7 +126,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRecording(id: number): Promise<boolean> {
     const result = await db.delete(recordings).where(eq(recordings.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   // AI Detections

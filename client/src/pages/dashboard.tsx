@@ -2,6 +2,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { CameraGrid } from "@/components/camera/camera-grid";
 import { RecentDetections } from "@/components/dashboard/recent-detections";
 import { SystemHealth } from "@/components/dashboard/system-health";
+import { AddCameraDialog } from "@/components/camera/add-camera-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -20,10 +21,12 @@ export default function Dashboard() {
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-sm text-gray-300">System Online</span>
             </div>
-            <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Camera
-            </Button>
+            <AddCameraDialog>
+              <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Camera
+              </Button>
+            </AddCameraDialog>
           </div>
         </div>
       </header>

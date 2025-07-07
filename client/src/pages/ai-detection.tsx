@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RecentDetections } from "@/components/dashboard/recent-detections";
+import { AiConfigDialog } from "@/components/ai/ai-config-dialog";
 import { Settings, Brain, TrendingUp } from "lucide-react";
 
 export default function AiDetection() {
@@ -17,10 +18,12 @@ export default function AiDetection() {
               <TrendingUp className="w-4 h-4 mr-2" />
               Analytics
             </Button>
-            <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
-              <Settings className="w-4 h-4 mr-2" />
-              Configure
-            </Button>
+            <AiConfigDialog>
+              <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+                <Settings className="w-4 h-4 mr-2" />
+                Configure
+              </Button>
+            </AiConfigDialog>
           </div>
         </div>
       </header>
