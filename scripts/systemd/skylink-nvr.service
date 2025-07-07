@@ -1,0 +1,46 @@
+[Unit]
+Description=Skylink Enterprise NVR System
+Documentation=https://github.com/your-repo/skylink-nvr
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=skylink
+Group=skylink
+WorkingDirectory=/opt/skylink-nvr
+
+# Environment
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/skylink-nvr/.env
+
+# Execution
+ExecStart=/usr/bin/node dist/index.js
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=10
+KillMode=process
+TimeoutSec=30
+
+# Output
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=skylink-nvr
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/skylink-nvr/recordings
+ReadWritePaths=/opt/skylink-nvr/snapshots
+ReadWritePaths=/opt/skylink-nvr/logs
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

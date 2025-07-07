@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  skylink-nvr:
+    build:
+      context: .
+      target: production
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - ./recordings:/app/recordings
+      - ./snapshots:/app/snapshots
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - skylink-network
+
+  # Optional: Include PostgreSQL if not using external database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=skylink_nvr
+      - POSTGRES_USER=skylink
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-skylink_secure_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - skylink-network
+
+  # Optional: Redis for session storage and caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - skylink-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  skylink-network:
+    driver: bridge

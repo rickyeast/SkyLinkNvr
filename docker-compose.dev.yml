@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  skylink-nvr-dev:
+    build:
+      context: .
+      target: development
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./recordings:/app/recordings
+      - ./snapshots:/app/snapshots
+    restart: unless-stopped
+    depends_on:
+      - postgres-dev
+    networks:
+      - skylink-dev-network
+
+  postgres-dev:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=skylink_nvr_dev
+      - POSTGRES_USER=skylink
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    networks:
+      - skylink-dev-network
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  skylink-dev-network:
+    driver: bridge
