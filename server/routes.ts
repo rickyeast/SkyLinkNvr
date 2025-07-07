@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCameraSchema, insertRecordingSchema, insertAiDetectionSchema } from "@shared/schema";
+import { insertCameraSchema, insertRecordingSchema, insertAiDetectionSchema, insertCameraTemplateSchema } from "@shared/schema";
 import { onvifService } from "./services/onvif";
 import { streamingService } from "./services/streaming";
 import { aiDetectionService } from "./services/ai-detection";
@@ -83,6 +83,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(devices);
     } catch (error) {
       res.status(500).json({ error: "Failed to discover cameras" });
+    }
+  });
+
+  // Camera connection test and capability detection
+  app.post("/api/cameras/test", async (req, res) => {
+    try {
+      const { ipAddress, username, password } = req.body;
+      
+      if (!ipAddress) {
+        return res.status(400).json({ error: "IP address is required" });
+      }
+
+      const result = await onvifService.testCameraConnection(ipAddress, username, password);
+      
+      if (result.success && result.capabilities) {
+        // Check if we have a template for this camera model
+        const existingTemplate = await storage.getCameraTemplateByModel(
+          result.capabilities.manufacturer,
+          result.capabilities.model
+        );
+
+        if (!existingTemplate) {
+          // Create new template
+          const templateData = {
+            manufacturer: result.capabilities.manufacturer,
+            model: result.capabilities.model,
+            capabilities: result.capabilities,
+            defaultSettings: {
+              resolution: result.capabilities.streamProfiles[0]?.resolution || "1920x1080",
+              fps: result.capabilities.streamProfiles[0]?.fps || 30,
+              codec: result.capabilities.streamProfiles[0]?.codec || "H.264",
+              rtspUrl: result.capabilities.streamProfiles[0]?.rtspUrl || `rtsp://${ipAddress}:554/Streaming/Channels/101`,
+              onvifUrl: `http://${ipAddress}/onvif/device_service`,
+              port: 554
+            }
+          };
+
+          await storage.createCameraTemplate(templateData);
+        } else {
+          // Update usage count for existing template
+          await storage.updateCameraTemplateUsage(existingTemplate.id);
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to test camera connection" });
     }
   });
 
@@ -208,6 +255,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(health);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch system health" });
+    }
+  });
+
+  // Camera Templates
+  app.get("/api/camera-templates", async (req, res) => {
+    try {
+      const templates = await storage.getCameraTemplates();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch camera templates" });
+    }
+  });
+
+  app.get("/api/camera-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getCameraTemplate(parseInt(req.params.id));
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch camera template" });
     }
   });
 

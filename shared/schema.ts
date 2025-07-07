@@ -69,6 +69,16 @@ export const systemHealth = pgTable("system_health", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
+export const cameraTemplates = pgTable("camera_templates", {
+  id: serial("id").primaryKey(),
+  manufacturer: text("manufacturer").notNull(),
+  model: text("model").notNull(),
+  capabilities: json("capabilities").notNull(),
+  defaultSettings: json("default_settings").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  usageCount: integer("usage_count").notNull().default(0),
+});
+
 // Relations
 export const camerasRelations = relations(cameras, ({ many }) => ({
   recordings: many(recordings),
@@ -122,6 +132,12 @@ export const insertSystemHealthSchema = createInsertSchema(systemHealth).omit({
   timestamp: true,
 });
 
+export const insertCameraTemplateSchema = createInsertSchema(cameraTemplates).omit({
+  id: true,
+  createdAt: true,
+  usageCount: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -137,3 +153,6 @@ export type InsertAiDetection = z.infer<typeof insertAiDetectionSchema>;
 
 export type SystemHealth = typeof systemHealth.$inferSelect;
 export type InsertSystemHealth = z.infer<typeof insertSystemHealthSchema>;
+
+export type CameraTemplate = typeof cameraTemplates.$inferSelect;
+export type InsertCameraTemplate = z.infer<typeof insertCameraTemplateSchema>;

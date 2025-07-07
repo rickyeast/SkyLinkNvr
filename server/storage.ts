@@ -1,10 +1,11 @@
 import { 
-  users, cameras, recordings, aiDetections, systemHealth,
+  users, cameras, recordings, aiDetections, systemHealth, cameraTemplates,
   type User, type InsertUser,
   type Camera, type InsertCamera,
   type Recording, type InsertRecording,
   type AiDetection, type InsertAiDetection,
-  type SystemHealth, type InsertSystemHealth
+  type SystemHealth, type InsertSystemHealth,
+  type CameraTemplate, type InsertCameraTemplate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
@@ -40,6 +41,13 @@ export interface IStorage {
   getLatestSystemHealth(): Promise<SystemHealth | undefined>;
   createSystemHealth(health: InsertSystemHealth): Promise<SystemHealth>;
   getSystemHealthHistory(hours: number): Promise<SystemHealth[]>;
+
+  // Camera Templates
+  getCameraTemplates(): Promise<CameraTemplate[]>;
+  getCameraTemplate(id: number): Promise<CameraTemplate | undefined>;
+  createCameraTemplate(template: InsertCameraTemplate): Promise<CameraTemplate>;
+  updateCameraTemplateUsage(id: number): Promise<boolean>;
+  getCameraTemplateByModel(manufacturer: string, model: string): Promise<CameraTemplate | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -70,7 +78,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCamera(camera: InsertCamera): Promise<Camera> {
-    const [newCamera] = await db.insert(cameras).values(camera).returning();
+    const [newCamera] = await db.insert(cameras).values(camera as any).returning();
     return newCamera;
   }
 
@@ -191,6 +199,37 @@ export class DatabaseStorage implements IStorage {
       .from(systemHealth)
       .where(gte(systemHealth.timestamp, since))
       .orderBy(systemHealth.timestamp);
+  }
+
+  // Camera Templates
+  async getCameraTemplates(): Promise<CameraTemplate[]> {
+    return await db.select().from(cameraTemplates).orderBy(desc(cameraTemplates.usageCount));
+  }
+
+  async getCameraTemplate(id: number): Promise<CameraTemplate | undefined> {
+    const [template] = await db.select().from(cameraTemplates).where(eq(cameraTemplates.id, id));
+    return template || undefined;
+  }
+
+  async createCameraTemplate(template: InsertCameraTemplate): Promise<CameraTemplate> {
+    const [newTemplate] = await db.insert(cameraTemplates).values(template as any).returning();
+    return newTemplate;
+  }
+
+  async updateCameraTemplateUsage(id: number): Promise<boolean> {
+    const result = await db
+      .update(cameraTemplates)
+      .set({ usageCount: 1 } as any)
+      .where(eq(cameraTemplates.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getCameraTemplateByModel(manufacturer: string, model: string): Promise<CameraTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(cameraTemplates)
+      .where(and(eq(cameraTemplates.manufacturer, manufacturer), eq(cameraTemplates.model, model)));
+    return template || undefined;
   }
 }
 
