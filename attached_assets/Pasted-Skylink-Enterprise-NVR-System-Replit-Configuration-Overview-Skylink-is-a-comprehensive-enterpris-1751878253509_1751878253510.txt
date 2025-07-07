@@ -1,0 +1,144 @@
+Skylink Enterprise NVR System - Replit Configuration
+Overview
+Skylink is a comprehensive enterprise-grade Network Video Recorder (NVR) system built for advanced IP camera management and surveillance. The application provides live video streaming, recording capabilities, playback functionality, AI detection, and ONVIF device discovery. It's designed as a modern web-based solution for professional security camera systems with enterprise features including advanced recording schedules and retention policies.
+
+System Architecture
+Frontend Architecture
+Framework: React 18 with TypeScript
+Routing: Wouter for client-side routing
+State Management: TanStack Query (React Query) for server state management
+UI Components: Radix UI primitives with shadcn/ui component library
+Styling: Tailwind CSS with custom Carbon Design System color palette
+Build Tool: Vite for development and production builds
+Backend Architecture
+Runtime: Python 3.11 with FastAPI framework
+Language: Python with async/await support
+Database ORM: SQLAlchemy with asyncio support
+Database Provider: Neon Database (serverless PostgreSQL)
+API Pattern: RESTful endpoints with automatic OpenAPI documentation
+Authentication: JWT-based with bcrypt password hashing
+AI Integration: Support for Code Project AI, OpenAI Vision, and custom YOLO servers
+Cross-Platform: Full Windows/Linux/macOS compatibility
+Data Storage Solutions
+Primary Database: PostgreSQL via Neon Database
+ORM: SQLAlchemy with async support for type-safe operations
+Schema Location: app/models.py for database model definitions
+Migration Strategy: Alembic for database migrations
+Storage Layer: DatabaseStorage class with comprehensive CRUD operations
+Key Components
+Camera Management System
+ONVIF Integration: Service layer for ONVIF protocol communication
+Device Discovery: Automated network scanning for IP cameras
+Connection Testing: Real-time camera connectivity validation
+Device Information: Manufacturer, model, and capability detection
+Video Streaming Service
+RTSP Support: Real-time streaming protocol implementation
+Stream Management: Active stream tracking and viewer counting
+Multi-Camera Support: Concurrent stream handling for multiple cameras
+Recording System
+Continuous Recording: Background recording with configurable duration
+File Management: Organized storage with timestamp-based naming
+Quality Control: Configurable recording quality levels (low/medium/high)
+Storage Tracking: File size and duration monitoring
+User Interface Components
+Live View: Grid and single-camera display modes with real-time streaming
+Playback Interface: Timeline-based video playback with controls
+Recording Management: Browse, download, and delete recordings
+Camera Discovery: Network scanning interface for device addition
+AI Detection Dashboard: Real-time detection monitoring and analytics
+Detection Settings: Per-camera AI configuration and threshold management
+Data Flow
+Camera Registration Flow
+User initiates camera discovery or manual addition
+System tests ONVIF connectivity
+Device information retrieved via ONVIF protocol
+Camera credentials validated
+Camera record created in database
+RTSP stream endpoint established
+Live Streaming Flow
+Client requests camera feed
+Backend initiates RTSP stream connection
+Stream proxy established for web client consumption
+Real-time status monitoring for stream health
+Automatic reconnection on stream failure
+Recording Flow
+Recording initiated manually or automatically
+RTSP stream captured to local file storage
+Recording metadata stored in database
+File management handles storage organization
+Recording status updated in real-time
+External Dependencies
+Database
+Neon Database: Serverless PostgreSQL hosting
+Connection: Environment variable DATABASE_URL required
+ONVIF Libraries
+Production: Requires node-onvif package installation
+Development: Mock service structure provided
+Video Processing
+RTSP Streaming: Requires node-rtsp-stream or FFmpeg integration
+Development: Mock streaming service structure provided
+UI Framework Dependencies
+Radix UI: Complete set of accessible UI primitives
+Lucide React: Icon library for consistent iconography
+React Hook Form: Form state management with validation
+Zod: Runtime type validation and schema parsing
+Deployment Strategy
+Development Environment
+Vite Dev Server: Hot module replacement for frontend
+Express Middleware: Vite integration for SSR-like development
+TypeScript Compilation: Real-time type checking
+Database Migrations: Drizzle Kit for schema updates
+Production Build
+Frontend: Vite production build with optimization
+Backend: ESBuild bundling for Node.js deployment
+Assets: Static file serving through Express
+Database: Automatic schema synchronization
+Environment Configuration
+DATABASE_URL: PostgreSQL connection string (required)
+NODE_ENV: Environment flag for development/production behavior
+REPL_ID: Replit-specific environment detection
+OPENAI_API_KEY: OpenAI Vision API key for AI detection (optional)
+AI Detection Integration
+Supported AI Providers
+Code Project AI Server: Self-hosted, no API key required
+Default endpoint: http://localhost:32168
+Supports: person, car, truck, bicycle, motorcycle, bus detection
+Recommended for privacy-focused deployments
+OpenAI Vision API: Cloud-based with high accuracy
+Requires API key and internet connection
+Supports: comprehensive object detection including animals
+Custom YOLO Servers: Flexible self-hosted options
+Configurable detection types and confidence thresholds
+Can be deployed on GPU-accelerated hardware
+Detection Features
+Real-time Analysis: Configurable detection intervals (1-60 seconds)
+Confidence Filtering: Adjustable confidence thresholds (0-100%)
+Bounding Box Tracking: Precise object location coordinates
+Thumbnail Generation: Automatic capture of detection events
+Multi-Camera Support: Independent AI settings per camera
+Historical Analytics: Detection statistics and trend analysis
+Cross-Platform Deployment
+Windows Hosting
+Compatibility: Windows 10/11, Windows Server 2019+
+Installation: Native Node.js installation or Docker
+Services: Windows Service integration via PM2 or NSSM
+Storage: NTFS file system with proper permissions
+Firewall: Windows Defender configuration for ports 5000+
+Linux Hosting
+Distributions: Ubuntu 20.04+, Debian 11+, CentOS 8+, RHEL 8+
+Installation: Native package managers (apt, yum, dnf)
+Services: systemd service integration
+Storage: ext4/xfs with proper ownership and permissions
+Security: iptables/ufw firewall configuration
+Docker Deployment
+Multi-platform: AMD64, ARM64 container support
+Orchestration: Docker Compose and Kubernetes ready
+Volumes: Persistent storage for recordings and thumbnails
+Networking: Container networking with port mapping
+Scalability: Horizontal scaling with load balancers
+Production Considerations
+Database: PostgreSQL clustering for high availability
+Storage: Network-attached storage (NAS) or cloud storage
+Monitoring: Application and system health monitoring
+Backup: Automated backup strategies for recordings and metadata
+Security: SSL/TLS encryption and user authentication
