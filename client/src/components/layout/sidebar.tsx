@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard,
   Video,
@@ -9,6 +10,7 @@ import {
   Settings,
   User,
   LogOut,
+  X
 } from "lucide-react";
 
 const navigation = [
@@ -20,11 +22,22 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps = {}) {
   const [location] = useLocation();
+  const isMobile = useIsMobile();
+
+  const handleLinkClick = () => {
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
 
   return (
-    <aside className="w-64 bg-ubiquiti-surface border-r border-ubiquiti-border flex-shrink-0 flex flex-col">
+    <aside className="w-64 bg-ubiquiti-surface border-r border-ubiquiti-border flex-shrink-0 flex flex-col h-full">
       <div className="p-6">
         <div className="flex items-center space-x-3 mb-8">
           <div className="w-8 h-8 bg-ubiquiti-blue rounded-lg flex items-center justify-center">

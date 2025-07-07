@@ -75,66 +75,73 @@ export default function AiDetection() {
 
   return (
     <>
-      <header className="bg-ubiquiti-surface border-b border-ubiquiti-border px-6 py-4">
-        <div className="flex items-center justify-between">
+      <header className="bg-ubiquiti-surface border-b border-ubiquiti-border px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
           <div>
-            <h2 className="text-2xl font-bold text-white">AI Detection Events</h2>
-            <p className="text-gray-400">Monitor and analyze AI-powered detection events{selectedEvent ? ` - Event #${selectedEvent}` : ''}</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">AI Detection Events</h2>
+            <p className="text-sm sm:text-base text-gray-400 hidden sm:block">Monitor and analyze AI-powered detection events{selectedEvent ? ` - Event #${selectedEvent}` : ''}</p>
+            {selectedEvent && (
+              <p className="text-sm text-gray-400 sm:hidden">Event #{selectedEvent}</p>
+            )}
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Link href="/settings">
-              <Button variant="outline" className="border-ubiquiti-border text-gray-300 hover:bg-ubiquiti-elevated">
+              <Button variant="outline" size="sm" className="border-ubiquiti-border text-gray-300 hover:bg-ubiquiti-elevated w-full sm:w-auto">
                 <Brain className="w-4 h-4 mr-2" />
-                CodeProjectAI Settings
+                <span className="hidden sm:inline">CodeProjectAI Settings</span>
+                <span className="sm:hidden">AI Settings</span>
               </Button>
             </Link>
             <AiConfigDialog>
-              <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+              <Button size="sm" className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark w-full sm:w-auto">
                 <Settings className="w-4 h-4 mr-2" />
-                Configure Detection
+                <span className="hidden sm:inline">Configure Detection</span>
+                <span className="sm:hidden">Configure</span>
               </Button>
             </AiConfigDialog>
           </div>
         </div>
       </header>
 
-      <div className="p-6 overflow-y-auto h-full">
-        <div className="space-y-6">
+      <div className="p-3 sm:p-6 overflow-y-auto h-full mobile-scroll">
+        <div className="space-y-4 sm:space-y-6">
           {/* Filter Bar */}
           <Card className="bg-ubiquiti-surface border-ubiquiti-border">
-            <CardContent className="p-4">
-              <div className="flex flex-wrap items-center gap-4">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
                 <div className="flex items-center space-x-2">
                   <Filter className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-300 text-sm">Filter by:</span>
                 </div>
-                <select 
-                  value={selectedCamera} 
-                  onChange={(e) => setSelectedCamera(e.target.value)}
-                  className="bg-ubiquiti-elevated border border-ubiquiti-border text-white px-3 py-1 rounded"
-                >
-                  <option value="all">All Cameras</option>
-                  {cameras?.map((camera) => (
-                    <option key={camera.id} value={camera.id.toString()}>
-                      {camera.name}
-                    </option>
-                  ))}
-                </select>
-                <select className="bg-ubiquiti-elevated border border-ubiquiti-border text-white px-3 py-1 rounded">
-                  <option value="all">All Types</option>
-                  <option value="person">Person</option>
-                  <option value="vehicle">Vehicle</option>
-                  <option value="animal">Animal</option>
-                  <option value="package">Package</option>
-                </select>
-                <select className="bg-ubiquiti-elevated border border-ubiquiti-border text-white px-3 py-1 rounded">
-                  <option value="today">Today</option>
-                  <option value="week">This Week</option>
-                  <option value="month">This Month</option>
-                  <option value="all">All Time</option>
-                </select>
+                <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4">
+                  <select 
+                    value={selectedCamera} 
+                    onChange={(e) => setSelectedCamera(e.target.value)}
+                    className="bg-ubiquiti-elevated border border-ubiquiti-border text-white px-3 py-2 rounded text-sm"
+                  >
+                    <option value="all">All Cameras</option>
+                    {cameras?.map((camera) => (
+                      <option key={camera.id} value={camera.id.toString()}>
+                        {camera.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select className="bg-ubiquiti-elevated border border-ubiquiti-border text-white px-3 py-2 rounded text-sm">
+                    <option value="all">All Types</option>
+                    <option value="person">Person</option>
+                    <option value="vehicle">Vehicle</option>
+                    <option value="animal">Animal</option>
+                    <option value="package">Package</option>
+                  </select>
+                  <select className="bg-ubiquiti-elevated border border-ubiquiti-border text-white px-3 py-2 rounded text-sm col-span-2 sm:col-span-1">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="all">All Time</option>
+                  </select>
+                </div>
                 <div className="flex-1" />
-                <div className="text-gray-400 text-sm">
+                <div className="text-gray-400 text-sm text-center sm:text-left">
                   {filteredDetections.length} events found
                 </div>
               </div>

@@ -47,21 +47,21 @@ export default function Settings() {
 
   return (
     <>
-      <header className="bg-ubiquiti-surface border-b border-ubiquiti-border px-6 py-4">
-        <div className="flex items-center justify-between">
+      <header className="bg-ubiquiti-surface border-b border-ubiquiti-border px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
           <div>
-            <h2 className="text-2xl font-bold text-white">Settings</h2>
-            <p className="text-gray-400">Configure system preferences and options</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Settings</h2>
+            <p className="text-sm sm:text-base text-gray-400">Configure system preferences and options</p>
           </div>
-          <Button onClick={handleSaveSettings} className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+          <Button onClick={handleSaveSettings} className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             Save Changes
           </Button>
         </div>
       </header>
 
-      <div className="p-6 overflow-y-auto h-full">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="p-3 sm:p-6 overflow-y-auto h-full mobile-scroll">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {/* System Settings */}
           <Card className="bg-ubiquiti-surface border-ubiquiti-border">
             <CardHeader>
