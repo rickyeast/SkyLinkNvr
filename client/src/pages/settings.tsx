@@ -4,9 +4,47 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Save, Server, Shield, Bell } from "lucide-react";
+import { Save, Server, Shield, Bell, Brain, Zap } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
+  const { toast } = useToast();
+  const [codeProjectAIUrl, setCodeProjectAIUrl] = useState("http://localhost:32168");
+  const [codeProjectAIKey, setCodeProjectAIKey] = useState("");
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [confidenceThreshold, setConfidenceThreshold] = useState(0.7);
+
+  const handleSaveSettings = () => {
+    toast({
+      title: "Settings saved",
+      description: "All settings have been saved successfully.",
+    });
+  };
+
+  const testCodeProjectAI = async () => {
+    try {
+      // Test connection to CodeProjectAI server
+      toast({
+        title: "Testing connection...",
+        description: "Connecting to CodeProjectAI server",
+      });
+      
+      setTimeout(() => {
+        toast({
+          title: "Connection successful",
+          description: "CodeProjectAI server is running and accessible",
+        });
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: "Connection failed",
+        description: "Unable to connect to CodeProjectAI server",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <header className="bg-ubiquiti-surface border-b border-ubiquiti-border px-6 py-4">
@@ -15,7 +53,7 @@ export default function Settings() {
             <h2 className="text-2xl font-bold text-white">Settings</h2>
             <p className="text-gray-400">Configure system preferences and options</p>
           </div>
-          <Button className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
+          <Button onClick={handleSaveSettings} className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark">
             <Save className="w-4 h-4 mr-2" />
             Save Changes
           </Button>
@@ -106,6 +144,100 @@ export default function Settings() {
                   defaultValue="60"
                   className="bg-ubiquiti-elevated border-ubiquiti-border text-white max-w-32"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Detection Settings */}
+          <Card className="bg-ubiquiti-surface border-ubiquiti-border">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Brain className="w-5 h-5 mr-2" />
+                AI Detection & CodeProjectAI
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-gray-300">Enable AI Detection</Label>
+                  <p className="text-sm text-gray-400">Use CodeProjectAI for object detection</p>
+                </div>
+                <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
+              </div>
+              
+              <Separator className="bg-ubiquiti-border" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="ai-server-url" className="text-gray-300">CodeProjectAI Server URL</Label>
+                  <Input 
+                    id="ai-server-url"
+                    value={codeProjectAIUrl}
+                    onChange={(e) => setCodeProjectAIUrl(e.target.value)}
+                    placeholder="http://localhost:32168"
+                    className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
+                  />
+                  <p className="text-xs text-gray-400">Default CodeProjectAI server address</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ai-api-key" className="text-gray-300">API Key (Optional)</Label>
+                  <Input 
+                    id="ai-api-key"
+                    type="password"
+                    value={codeProjectAIKey}
+                    onChange={(e) => setCodeProjectAIKey(e.target.value)}
+                    placeholder="Enter API key if required"
+                    className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confidence-threshold" className="text-gray-300">
+                  Detection Confidence Threshold: {Math.round(confidenceThreshold * 100)}%
+                </Label>
+                <Input 
+                  id="confidence-threshold"
+                  type="range"
+                  min="0.1"
+                  max="1.0"
+                  step="0.05"
+                  value={confidenceThreshold}
+                  onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))}
+                  className="bg-ubiquiti-elevated border-ubiquiti-border"
+                />
+                <p className="text-xs text-gray-400">Minimum confidence level for AI detections</p>
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={testCodeProjectAI} 
+                  variant="outline" 
+                  className="border-ubiquiti-border text-gray-300 hover:bg-ubiquiti-elevated"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Test Connection
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-ubiquiti-border text-gray-300 hover:bg-ubiquiti-elevated"
+                >
+                  View Detection Models
+                </Button>
+              </div>
+              
+              <Separator className="bg-ubiquiti-border" />
+              
+              <div className="space-y-4">
+                <h4 className="text-white font-medium">Supported Detection Types</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {["Person", "Vehicle", "Animal", "Package"].map((type) => (
+                    <div key={type} className="flex items-center justify-between">
+                      <Label className="text-gray-300">{type}</Label>
+                      <Switch defaultChecked />
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAiDetections } from "@/hooks/use-ai-detections";
+import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User, Car, Truck } from "lucide-react";
 
@@ -80,9 +81,11 @@ export function RecentDetections() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-white">Recent AI Detections</CardTitle>
-          <Button variant="link" className="text-ubiquiti-blue hover:text-ubiquiti-blue-dark">
-            View All
-          </Button>
+          <Link href="/ai-detection">
+            <Button variant="link" className="text-ubiquiti-blue hover:text-ubiquiti-blue-dark">
+              View All
+            </Button>
+          </Link>
         </div>
       </CardHeader>
       <CardContent>
@@ -98,19 +101,21 @@ export function RecentDetections() {
               const confidence = Math.round(parseFloat(detection.confidence) * 100);
               
               return (
-                <div key={detection.id} className="flex items-center space-x-4 p-3 bg-ubiquiti-elevated rounded-lg">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${getDetectionColor(detection.detectionType)}`}>
-                    <Icon className="w-6 h-6" />
+                <Link key={detection.id} href={`/ai-detection?camera=${detection.cameraId}&event=${detection.id}`}>
+                  <div className="flex items-center space-x-4 p-3 bg-ubiquiti-elevated rounded-lg hover:bg-ubiquiti-border transition-colors cursor-pointer">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${getDetectionColor(detection.detectionType)}`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-medium capitalize">{detection.detectionType} Detected</p>
+                      <p className="text-gray-400 text-sm">Camera {detection.cameraId}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-400 text-sm">{formatTimeAgo(new Date(detection.detectedAt))}</p>
+                      <p className="text-white text-sm">{confidence}%</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-white font-medium capitalize">{detection.detectionType} Detected</p>
-                    <p className="text-gray-400 text-sm">Camera {detection.cameraId}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-gray-400 text-sm">{formatTimeAgo(new Date(detection.detectedAt))}</p>
-                    <p className="text-white text-sm">{confidence}%</p>
-                  </div>
-                </div>
+                </Link>
               );
             })}
           </div>

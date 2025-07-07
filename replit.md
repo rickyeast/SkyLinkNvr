@@ -105,6 +105,12 @@ Changelog:
   - Added "Test Camera Connection" feature with visual feedback
   - Auto-fills camera settings based on detected capabilities
   - Shows detected features like PTZ, audio, night vision support
+- July 07, 2025. Added CodeProjectAI integration and enhanced AI detection
+  - Added CodeProjectAI server configuration in settings
+  - Made AI detection events clickable with camera and event navigation
+  - Enhanced AI detection page with filtering and event details
+  - Added "View All" button linking to comprehensive events page
+  - Integrated AI camera support configuration
 ```
 
 ## User Preferences
