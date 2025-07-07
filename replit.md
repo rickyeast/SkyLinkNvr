@@ -99,6 +99,12 @@ Skylink is a comprehensive enterprise-grade Network Video Recorder (NVR) system 
 ```
 Changelog:
 - July 07, 2025. Initial setup
+- July 07, 2025. Enhanced camera adding with Quick Setup tab
+  - Added automatic camera capability detection
+  - Implemented camera template system for reusable configurations
+  - Added "Test Camera Connection" feature with visual feedback
+  - Auto-fills camera settings based on detected capabilities
+  - Shows detected features like PTZ, audio, night vision support
 ```
 
 ## User Preferences

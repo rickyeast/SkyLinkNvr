@@ -208,6 +208,19 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
     createCameraMutation.mutate(data);
   };
 
+  const handleQuickSubmit = () => {
+    const formData = form.getValues();
+    if (!formData.name || !formData.ipAddress || !formData.rtspUrl) {
+      toast({
+        title: "Missing Information",
+        description: "Please test the camera connection first to auto-fill required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    onSubmit(formData);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -226,65 +239,66 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
           </TabsList>
 
           <TabsContent value="quick" className="space-y-4">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Quick Camera Setup</h3>
-              <p className="text-gray-400">Enter IP address and credentials to automatically detect camera capabilities</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="ipAddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-300">IP Address</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          placeholder="192.168.1.100"
-                          className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <Form {...form}>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">Quick Camera Setup</h3>
+                <p className="text-gray-400">Enter IP address and credentials to automatically detect camera capabilities</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="ipAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-300">IP Address</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="192.168.1.100"
+                            className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-300">Username</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          placeholder="admin"
-                          className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-300">Username</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="admin"
+                            className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-300">Password</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          type="password"
-                          className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-300">Password</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            type="password"
+                            className="bg-ubiquiti-elevated border-ubiquiti-border text-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
               <Button 
                 type="button"
@@ -382,7 +396,8 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
                   </CardContent>
                 </Card>
               )}
-            </div>
+              </div>
+            </Form>
           </TabsContent>
 
           <TabsContent value="discover" className="space-y-4">
@@ -633,7 +648,7 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
               Cancel
             </Button>
             <Button 
-              onClick={() => form.handleSubmit(onSubmit)()}
+              onClick={handleQuickSubmit}
               disabled={createCameraMutation.isPending}
               className="bg-ubiquiti-blue hover:bg-ubiquiti-blue-dark"
             >
