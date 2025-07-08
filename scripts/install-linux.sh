@@ -5,79 +5,250 @@
 
 set -e
 
-echo "Installing Skylink Enterprise NVR on Linux..."
-
-# Check if running as root
-if [[ $EUID -eq 0 ]]; then
-   echo "This script should not be run as root. Please run as a regular user with sudo privileges."
-   exit 1
+# Enable verbose mode if -v flag is passed
+VERBOSE=false
+if [[ "$1" == "-v" ]] || [[ "$1" == "--verbose" ]]; then
+    VERBOSE=true
+    set -x
 fi
 
+echo "=========================================="
+echo "Skylink Enterprise NVR - Linux Installer"
+echo "=========================================="
+echo ""
+
+# Function for verbose logging
+log() {
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    else
+        echo "$1"
+    fi
+}
+
+# Check if sudo is available when not running as root
+if [[ $EUID -ne 0 ]] && ! command -v sudo &> /dev/null; then
+    echo "❌ ERROR: sudo is required but not found."
+    echo "   Please install sudo or run this script as root."
+    exit 1
+fi
+
+# Check if user has sudo privileges (when not running as root)
+if [[ $EUID -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+    echo "⚠️  You may be prompted for your password to run commands with sudo."
+fi
+
+log "🔍 Checking system compatibility..."
+if ! grep -E "(Ubuntu|Debian)" /etc/os-release &> /dev/null; then
+    echo "⚠️  WARNING: This script is designed for Ubuntu/Debian systems."
+    echo "   It may not work correctly on other distributions."
+    read -p "Continue anyway? (y/N): " continue_install
+    if [[ ! $continue_install =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+log "✅ System compatibility check passed"
+
 # Update package list
-echo "Updating package list..."
-sudo apt update
+log "📦 Updating package list..."
+if [[ "$VERBOSE" == "true" ]]; then
+    if [[ $EUID -eq 0 ]]; then
+        apt update
+    else
+        sudo apt update
+    fi
+else
+    if [[ $EUID -eq 0 ]]; then
+        apt update > /dev/null 2>&1
+    else
+        sudo apt update > /dev/null 2>&1
+    fi
+fi
+log "✅ Package list updated"
 
 # Install required system dependencies
-echo "Installing system dependencies..."
-sudo apt install -y \
-    curl \
-    wget \
-    gnupg \
-    lsb-release \
-    build-essential \
-    python3 \
-    python3-pip \
-    git \
-    nginx \
-    ufw \
+log "🔧 Installing system dependencies..."
+PACKAGES=(
+    curl
+    wget
+    gnupg
+    lsb-release
+    build-essential
+    python3
+    python3-pip
+    git
+    nginx
+    ufw
     systemd
+)
+
+if [[ "$VERBOSE" == "true" ]]; then
+    if [[ $EUID -eq 0 ]]; then
+        apt install -y "${PACKAGES[@]}"
+    else
+        sudo apt install -y "${PACKAGES[@]}"
+    fi
+else
+    if [[ $EUID -eq 0 ]]; then
+        apt install -y "${PACKAGES[@]}" > /dev/null 2>&1
+    else
+        sudo apt install -y "${PACKAGES[@]}" > /dev/null 2>&1
+    fi
+fi
+log "✅ System dependencies installed"
 
 # Install Node.js 20
-echo "Installing Node.js 20..."
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+log "📥 Installing Node.js 20..."
+if ! command -v node &> /dev/null || ! node --version | grep -q "v20"; then
+    log "   Downloading Node.js repository setup..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        if [[ $EUID -eq 0 ]]; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt install -y nodejs
+        else
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt install -y nodejs
+        fi
+    else
+        if [[ $EUID -eq 0 ]]; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null 2>&1
+            apt install -y nodejs > /dev/null 2>&1
+        else
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - > /dev/null 2>&1
+            sudo apt install -y nodejs > /dev/null 2>&1
+        fi
+    fi
+else
+    log "   Node.js 20 is already installed"
+fi
 
 # Verify Node.js installation
-node_version=$(node --version)
-npm_version=$(npm --version)
-echo "Node.js version: $node_version"
-echo "npm version: $npm_version"
+if command -v node &> /dev/null && command -v npm &> /dev/null; then
+    node_version=$(node --version)
+    npm_version=$(npm --version)
+    log "✅ Node.js installation verified"
+    log "   Node.js version: $node_version"
+    log "   npm version: $npm_version"
+else
+    echo "❌ ERROR: Node.js installation failed"
+    exit 1
+fi
 
 # Install PostgreSQL (optional)
-read -p "Install PostgreSQL locally? (y/N): " install_postgres
+echo ""
+read -p "🗄️  Install PostgreSQL locally? (y/N): " install_postgres
 if [[ $install_postgres =~ ^[Yy]$ ]]; then
-    echo "Installing PostgreSQL..."
-    sudo apt install -y postgresql postgresql-contrib
+    log "📥 Installing PostgreSQL..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        if [[ $EUID -eq 0 ]]; then
+            apt install -y postgresql postgresql-contrib
+        else
+            sudo apt install -y postgresql postgresql-contrib
+        fi
+    else
+        if [[ $EUID -eq 0 ]]; then
+            apt install -y postgresql postgresql-contrib > /dev/null 2>&1
+        else
+            sudo apt install -y postgresql postgresql-contrib > /dev/null 2>&1
+        fi
+    fi
+    
+    log "🔧 Configuring PostgreSQL..."
+    # Generate a secure random password
+    POSTGRES_PASSWORD=$(openssl rand -base64 12)
     
     # Configure PostgreSQL
-    sudo -u postgres createuser skylink
-    sudo -u postgres createdb skylink_nvr
-    sudo -u postgres psql -c "ALTER USER skylink PASSWORD 'skylink_secure_pass';"
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skylink_nvr TO skylink;"
+    if [[ $EUID -eq 0 ]]; then
+        su - postgres -c "createuser skylink" 2>/dev/null || true
+        su - postgres -c "createdb skylink_nvr" 2>/dev/null || true
+        su - postgres -c "psql -c \"ALTER USER skylink PASSWORD '$POSTGRES_PASSWORD';\"" 2>/dev/null
+        su - postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE skylink_nvr TO skylink;\"" 2>/dev/null
+    else
+        sudo -u postgres createuser skylink 2>/dev/null || true
+        sudo -u postgres createdb skylink_nvr 2>/dev/null || true
+        sudo -u postgres psql -c "ALTER USER skylink PASSWORD '$POSTGRES_PASSWORD';" 2>/dev/null
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skylink_nvr TO skylink;" 2>/dev/null
+    fi
+    
+    # Store password for later use
+    POSTGRES_URL="postgresql://skylink:$POSTGRES_PASSWORD@localhost:5432/skylink_nvr"
+    log "✅ PostgreSQL configured"
+    log "   Database: skylink_nvr"
+    log "   User: skylink"
+    log "   Password: $POSTGRES_PASSWORD (saved to .env file)"
+else
+    log "⏭️  Skipping PostgreSQL installation"
+    POSTGRES_URL="postgresql://username:password@localhost:5432/skylink_nvr"
 fi
 
 # Create application user
-echo "Creating skylink user..."
-sudo useradd -r -s /bin/false -d /opt/skylink-nvr skylink || true
+log "👤 Creating skylink system user..."
+if ! id -u skylink &>/dev/null; then
+    if [[ $EUID -eq 0 ]]; then
+        useradd -r -s /bin/false -d /opt/skylink-nvr skylink
+    else
+        sudo useradd -r -s /bin/false -d /opt/skylink-nvr skylink
+    fi
+    log "✅ User 'skylink' created"
+else
+    log "✅ User 'skylink' already exists"
+fi
 
 # Create application directory
 APP_DIR="/opt/skylink-nvr"
-echo "Creating application directory at $APP_DIR..."
-sudo mkdir -p $APP_DIR
-sudo mkdir -p $APP_DIR/recordings
-sudo mkdir -p $APP_DIR/snapshots
-sudo mkdir -p $APP_DIR/logs
-sudo chown -R skylink:skylink $APP_DIR
+log "📁 Creating application directory at $APP_DIR..."
+if [[ $EUID -eq 0 ]]; then
+    mkdir -p $APP_DIR
+    mkdir -p $APP_DIR/recordings
+    mkdir -p $APP_DIR/snapshots
+    mkdir -p $APP_DIR/logs
+    mkdir -p $APP_DIR/config
+    chown -R skylink:skylink $APP_DIR
+else
+    sudo mkdir -p $APP_DIR
+    sudo mkdir -p $APP_DIR/recordings
+    sudo mkdir -p $APP_DIR/snapshots
+    sudo mkdir -p $APP_DIR/logs
+    sudo mkdir -p $APP_DIR/config
+    sudo chown -R skylink:skylink $APP_DIR
+fi
+log "✅ Application directories created"
 
 # Create environment file
-sudo tee $APP_DIR/.env > /dev/null <<EOF
+log "⚙️  Creating environment configuration..."
+if [[ $EUID -eq 0 ]]; then
+    tee $APP_DIR/.env > /dev/null <<EOF
 NODE_ENV=production
-DATABASE_URL=postgresql://skylink:skylink_secure_pass@localhost:5432/skylink_nvr
+DATABASE_URL=${POSTGRES_URL}
 PORT=5000
+RECORDINGS_PATH=$APP_DIR/recordings
+SNAPSHOTS_PATH=$APP_DIR/snapshots
+LOGS_PATH=$APP_DIR/logs
 EOF
+    chown skylink:skylink $APP_DIR/.env
+    chmod 600 $APP_DIR/.env
+else
+    sudo tee $APP_DIR/.env > /dev/null <<EOF
+NODE_ENV=production
+DATABASE_URL=${POSTGRES_URL}
+PORT=5000
+RECORDINGS_PATH=$APP_DIR/recordings
+SNAPSHOTS_PATH=$APP_DIR/snapshots
+LOGS_PATH=$APP_DIR/logs
+EOF
+    sudo chown skylink:skylink $APP_DIR/.env
+    sudo chmod 600 $APP_DIR/.env
+fi
+log "✅ Environment file created and secured"
 
 # Create systemd service file
-sudo tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
+log "⚙️  Creating systemd service..."
+if [[ $EUID -eq 0 ]]; then
+    tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
+else
+    sudo tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
+fi
 [Unit]
 Description=Skylink Enterprise NVR
 After=network.target postgresql.service
@@ -108,8 +279,15 @@ ReadWritePaths=$APP_DIR
 WantedBy=multi-user.target
 EOF
 
+log "✅ Systemd service created"
+
 # Create nginx configuration
-sudo tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<EOF
+log "⚙️  Creating nginx configuration..."
+if [[ $EUID -eq 0 ]]; then
+    tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<EOF
+else
+    sudo tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<EOF
+fi
 server {
     listen 80;
     listen [::]:80;
@@ -149,24 +327,54 @@ server {
 }
 EOF
 
+log "✅ Nginx configuration created"
+
 # Enable nginx site
-sudo ln -sf /etc/nginx/sites-available/skylink-nvr /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
+log "⚙️  Enabling nginx site..."
+if [[ $EUID -eq 0 ]]; then
+    ln -sf /etc/nginx/sites-available/skylink-nvr /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+else
+    sudo ln -sf /etc/nginx/sites-available/skylink-nvr /etc/nginx/sites-enabled/
+    sudo rm -f /etc/nginx/sites-enabled/default
+fi
+log "✅ Nginx site enabled"
 
 # Configure firewall
-echo "Configuring firewall..."
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw --force enable
+log "🔧 Configuring firewall..."
+if [[ $EUID -eq 0 ]]; then
+    ufw allow 22/tcp
+    ufw allow 80/tcp
+    ufw allow 443/tcp
+    ufw --force enable
+else
+    sudo ufw allow 22/tcp
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    sudo ufw --force enable
+fi
+log "✅ Firewall configured"
 
 # Reload systemd and enable services
-sudo systemctl daemon-reload
-sudo systemctl enable skylink-nvr
-sudo systemctl enable nginx
+log "⚙️  Enabling services..."
+if [[ $EUID -eq 0 ]]; then
+    systemctl daemon-reload
+    systemctl enable skylink-nvr
+    systemctl enable nginx
+else
+    sudo systemctl daemon-reload
+    sudo systemctl enable skylink-nvr
+    sudo systemctl enable nginx
+fi
+log "✅ Services enabled"
 
 # Create installation instructions
-sudo tee $APP_DIR/INSTALLATION.txt > /dev/null <<EOF
+log "📝 Creating installation instructions..."
+if [[ $EUID -eq 0 ]]; then
+    tee $APP_DIR/INSTALLATION.txt > /dev/null <<EOF
+else
+    sudo tee $APP_DIR/INSTALLATION.txt > /dev/null <<EOF
+fi
 Skylink Enterprise NVR Installation Complete!
 
 Next Steps:
@@ -202,10 +410,30 @@ Configuration:
 EOF
 
 echo ""
-echo "Installation completed successfully!"
-echo "Next steps:"
-echo "1. Copy the application source code to $APP_DIR"
-echo "2. Configure the .env file with your database credentials"
-echo "3. Build and start the application"
+echo "=========================================="
+echo "🎉 Installation completed successfully!"
+echo "=========================================="
 echo ""
-echo "Check $APP_DIR/INSTALLATION.txt for detailed instructions."
+log "📋 Next steps:"
+log "   1. Copy the application source code to $APP_DIR"
+if [[ $install_postgres =~ ^[Yy]$ ]]; then
+    log "   2. The database is already configured and ready"
+else
+    log "   2. Configure the .env file with your database credentials"
+fi
+log "   3. Build and start the application:"
+log "      cd $APP_DIR"
+log "      npm install"
+log "      npm run build"
+log "      npm run db:push"
+log "      sudo systemctl start skylink-nvr"
+echo ""
+log "📖 For detailed instructions: cat $APP_DIR/INSTALLATION.txt"
+log "🔧 Service management: sudo systemctl {start|stop|restart|status} skylink-nvr"
+log "📊 View logs: sudo journalctl -u skylink-nvr -f"
+log "🌐 Access application: http://localhost (via nginx) or http://localhost:5000 (direct)"
+
+if [[ "$VERBOSE" == "true" ]]; then
+    echo ""
+    echo "Installation completed with verbose logging enabled."
+fi

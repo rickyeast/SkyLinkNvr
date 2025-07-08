@@ -126,6 +126,13 @@ Changelog:
   - Added comprehensive deployment documentation
   - Created health check and monitoring scripts
   - Added environment configuration templates
+- July 08, 2025. Enhanced installation scripts with verbose logging
+  - Removed root user restriction from Linux installation script
+  - Added verbose mode support (-v/--verbose flag) for detailed installation logging
+  - Enhanced Windows PowerShell installer with comprehensive error handling
+  - Added emoji indicators and timestamped logging for better user experience
+  - Improved PostgreSQL configuration with secure password generation
+  - Added dual execution support (root and sudo) for Linux installation
 ```
 
 ## User Preferences
