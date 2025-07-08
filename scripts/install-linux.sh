@@ -245,10 +245,7 @@ log "✅ Environment file created and secured"
 # Create systemd service file
 log "⚙️  Creating systemd service..."
 if [[ $EUID -eq 0 ]]; then
-    tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
-else
-    sudo tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
-fi
+    tee /etc/systemd/system/skylink-nvr.service > /dev/null <<'EOF'
 [Unit]
 Description=Skylink Enterprise NVR
 After=network.target postgresql.service
@@ -278,16 +275,45 @@ ReadWritePaths=$APP_DIR
 [Install]
 WantedBy=multi-user.target
 EOF
+else
+    sudo tee /etc/systemd/system/skylink-nvr.service > /dev/null <<'EOF'
+[Unit]
+Description=Skylink Enterprise NVR
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=skylink
+Group=skylink
+WorkingDirectory=$APP_DIR
+Environment=NODE_ENV=production
+EnvironmentFile=$APP_DIR/.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=skylink-nvr
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=$APP_DIR
+
+[Install]
+WantedBy=multi-user.target
+EOF
+fi
 
 log "✅ Systemd service created"
 
 # Create nginx configuration
 log "⚙️  Creating nginx configuration..."
 if [[ $EUID -eq 0 ]]; then
-    tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<EOF
-else
-    sudo tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<EOF
-fi
+    tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<'EOF'
 server {
     listen 80;
     listen [::]:80;
@@ -326,6 +352,47 @@ server {
     }
 }
 EOF
+else
+    sudo tee /etc/nginx/sites-available/skylink-nvr > /dev/null <<'EOF'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    # Security headers
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    # Proxy to Node.js application
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400;
+    }
+
+    # Static files and recordings
+    location /recordings/ {
+        alias $APP_DIR/recordings/;
+        expires 1h;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /snapshots/ {
+        alias $APP_DIR/snapshots/;
+        expires 1h;
+        add_header Cache-Control "public, immutable";
+    }
+}
+EOF
+fi
 
 log "✅ Nginx configuration created"
 
@@ -371,10 +438,7 @@ log "✅ Services enabled"
 # Create installation instructions
 log "📝 Creating installation instructions..."
 if [[ $EUID -eq 0 ]]; then
-    tee $APP_DIR/INSTALLATION.txt > /dev/null <<EOF
-else
-    sudo tee $APP_DIR/INSTALLATION.txt > /dev/null <<EOF
-fi
+    tee $APP_DIR/INSTALLATION.txt > /dev/null <<'EOF'
 Skylink Enterprise NVR Installation Complete!
 
 Next Steps:
@@ -408,6 +472,42 @@ Configuration:
 - Nginx: /etc/nginx/sites-available/skylink-nvr
 - Service: /etc/systemd/system/skylink-nvr.service
 EOF
+else
+    sudo tee $APP_DIR/INSTALLATION.txt > /dev/null <<'EOF'
+Skylink Enterprise NVR Installation Complete!
+
+Next Steps:
+1. Copy or clone the Skylink NVR source code to: $APP_DIR
+2. Set proper ownership: sudo chown -R skylink:skylink $APP_DIR
+3. Install dependencies: cd $APP_DIR && npm install
+4. Build the application: npm run build
+5. Configure your database connection in: $APP_DIR/.env
+6. Run database migrations: npm run db:push
+7. Start the service: sudo systemctl start skylink-nvr
+
+Service Management:
+- Start: sudo systemctl start skylink-nvr
+- Stop: sudo systemctl stop skylink-nvr
+- Restart: sudo systemctl restart skylink-nvr
+- Status: sudo systemctl status skylink-nvr
+- Logs: sudo journalctl -u skylink-nvr -f
+
+Default URLs:
+- Application: http://localhost (via nginx)
+- Direct: http://localhost:5000
+- Database: postgresql://localhost:5432 (if installed locally)
+
+Data Directories:
+- Recordings: $APP_DIR/recordings
+- Snapshots: $APP_DIR/snapshots
+- Logs: $APP_DIR/logs
+
+Configuration:
+- Environment: $APP_DIR/.env
+- Nginx: /etc/nginx/sites-available/skylink-nvr
+- Service: /etc/systemd/system/skylink-nvr.service
+EOF
+fi
 
 echo ""
 echo "=========================================="
