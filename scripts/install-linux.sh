@@ -164,11 +164,21 @@ if [[ $install_postgres =~ ^[Yy]$ ]]; then
         su - postgres -c "createdb skylink_nvr" 2>/dev/null || true
         su - postgres -c "psql -c \"ALTER USER skylink PASSWORD '$POSTGRES_PASSWORD';\"" 2>/dev/null
         su - postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE skylink_nvr TO skylink;\"" 2>/dev/null
+        su - postgres -c "psql -d skylink_nvr -c \"GRANT ALL ON SCHEMA public TO skylink;\"" 2>/dev/null
+        su - postgres -c "psql -d skylink_nvr -c \"GRANT ALL ON ALL TABLES IN SCHEMA public TO skylink;\"" 2>/dev/null
+        su - postgres -c "psql -d skylink_nvr -c \"GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO skylink;\"" 2>/dev/null
+        su - postgres -c "psql -d skylink_nvr -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO skylink;\"" 2>/dev/null
+        su - postgres -c "psql -d skylink_nvr -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO skylink;\"" 2>/dev/null
     else
         sudo -u postgres createuser skylink 2>/dev/null || true
         sudo -u postgres createdb skylink_nvr 2>/dev/null || true
         sudo -u postgres psql -c "ALTER USER skylink PASSWORD '$POSTGRES_PASSWORD';" 2>/dev/null
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE skylink_nvr TO skylink;" 2>/dev/null
+        sudo -u postgres psql -d skylink_nvr -c "GRANT ALL ON SCHEMA public TO skylink;" 2>/dev/null
+        sudo -u postgres psql -d skylink_nvr -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO skylink;" 2>/dev/null
+        sudo -u postgres psql -d skylink_nvr -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO skylink;" 2>/dev/null
+        sudo -u postgres psql -d skylink_nvr -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO skylink;" 2>/dev/null
+        sudo -u postgres psql -d skylink_nvr -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO skylink;" 2>/dev/null
     fi
     
     # Store password for later use
@@ -245,7 +255,7 @@ log "✅ Environment file created and secured"
 # Create systemd service file
 log "⚙️  Creating systemd service..."
 if [[ $EUID -eq 0 ]]; then
-    tee /etc/systemd/system/skylink-nvr.service > /dev/null <<'EOF'
+    tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
 [Unit]
 Description=Skylink Enterprise NVR
 After=network.target postgresql.service
@@ -276,7 +286,7 @@ ReadWritePaths=$APP_DIR
 WantedBy=multi-user.target
 EOF
 else
-    sudo tee /etc/systemd/system/skylink-nvr.service > /dev/null <<'EOF'
+    sudo tee /etc/systemd/system/skylink-nvr.service > /dev/null <<EOF
 [Unit]
 Description=Skylink Enterprise NVR
 After=network.target postgresql.service
