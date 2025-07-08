@@ -280,6 +280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recording routes
+  const recordingRoutes = await import('./routes/recording');
+  app.use('/api/recording', recordingRoutes.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }

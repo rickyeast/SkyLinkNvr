@@ -45,6 +45,8 @@ export const recordings = pgTable("recordings", {
   fileSize: integer("file_size"), // in bytes
   quality: text("quality").notNull().default("medium"), // low, medium, high
   status: text("status").notNull().default("recording"), // recording, completed, error
+  triggerType: text("trigger_type").default("manual").notNull(), // manual, motion, scheduled, continuous
+  motionEvents: json("motion_events").$type<Array<{ timestamp: string; confidence: number; boundingBox: { x: number; y: number; width: number; height: number } }>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -77,6 +79,34 @@ export const cameraTemplates = pgTable("camera_templates", {
   defaultSettings: json("default_settings").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   usageCount: integer("usage_count").notNull().default(0),
+});
+
+export const recordingSettings = pgTable("recording_settings", {
+  id: serial("id").primaryKey(),
+  cameraId: integer("camera_id").notNull().references(() => cameras.id, { onDelete: "cascade" }),
+  continuousRecording: boolean("continuous_recording").default(false).notNull(),
+  motionTriggered: boolean("motion_triggered").default(false).notNull(),
+  scheduledRecording: boolean("scheduled_recording").default(false).notNull(),
+  motionSensitivity: decimal("motion_sensitivity").default("0.5").notNull(),
+  preRecordSeconds: integer("pre_record_seconds").default(5).notNull(),
+  postRecordSeconds: integer("post_record_seconds").default(10).notNull(),
+  maxClipDuration: integer("max_clip_duration").default(300).notNull(), // 5 minutes
+  retentionDays: integer("retention_days").default(30).notNull(),
+  schedule: json("schedule").$type<Array<{ day: string; startTime: string; endTime: string; enabled: boolean }>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const motionEvents = pgTable("motion_events", {
+  id: serial("id").primaryKey(),
+  cameraId: integer("camera_id").notNull().references(() => cameras.id, { onDelete: "cascade" }),
+  recordingId: integer("recording_id").references(() => recordings.id, { onDelete: "cascade" }),
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  confidence: decimal("confidence").notNull(),
+  boundingBox: json("bounding_box").$type<{ x: number; y: number; width: number; height: number }>(),
+  eventType: text("event_type").default("motion").notNull(), // motion, person, vehicle, etc.
+  thumbnailPath: text("thumbnail_path"),
+  processed: boolean("processed").default(false).notNull(),
 });
 
 export const systemSettings = pgTable("system_settings", {
@@ -152,6 +182,17 @@ export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omi
   updatedAt: true,
 });
 
+export const insertRecordingSettingsSchema = createInsertSchema(recordingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMotionEventSchema = createInsertSchema(motionEvents).omit({
+  id: true,
+  detectedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -173,3 +214,9 @@ export type InsertCameraTemplate = z.infer<typeof insertCameraTemplateSchema>;
 
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = z.infer<typeof insertSystemSettingsSchema>;
+
+export type RecordingSetting = typeof recordingSettings.$inferSelect;
+export type InsertRecordingSetting = z.infer<typeof insertRecordingSettingsSchema>;
+
+export type MotionEvent = typeof motionEvents.$inferSelect;
+export type InsertMotionEvent = z.infer<typeof insertMotionEventSchema>;

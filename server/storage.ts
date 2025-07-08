@@ -48,6 +48,20 @@ export interface IStorage {
   createCameraTemplate(template: InsertCameraTemplate): Promise<CameraTemplate>;
   updateCameraTemplateUsage(id: number): Promise<boolean>;
   getCameraTemplateByModel(manufacturer: string, model: string): Promise<CameraTemplate | undefined>;
+
+  // Recording Settings
+  getRecordingSettings(cameraId: number): Promise<RecordingSetting | undefined>;
+  createRecordingSettings(settings: InsertRecordingSetting): Promise<RecordingSetting>;
+  updateRecordingSettings(cameraId: number, settings: Partial<InsertRecordingSetting>): Promise<RecordingSetting | undefined>;
+
+  // Motion Events
+  createMotionEvent(event: InsertMotionEvent): Promise<MotionEvent>;
+  getMotionEventsByCamera(cameraId: number): Promise<MotionEvent[]>;
+  getMotionEventsByRecording(recordingId: number): Promise<MotionEvent[]>;
+
+  // Enhanced Recordings
+  getOldRecordings(cameraId: number, beforeDate: Date): Promise<Recording[]>;
+  getRecordingsByTriggerType(triggerType: string): Promise<Recording[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -230,6 +244,60 @@ export class DatabaseStorage implements IStorage {
       .from(cameraTemplates)
       .where(and(eq(cameraTemplates.manufacturer, manufacturer), eq(cameraTemplates.model, model)));
     return template || undefined;
+  }
+
+  // Recording Settings
+  async getRecordingSettings(cameraId: number): Promise<RecordingSetting | undefined> {
+    const [settings] = await db.select().from(recordingSettings)
+      .where(eq(recordingSettings.cameraId, cameraId));
+    return settings || undefined;
+  }
+
+  async createRecordingSettings(settings: InsertRecordingSetting): Promise<RecordingSetting> {
+    const [newSettings] = await db.insert(recordingSettings).values(settings).returning();
+    return newSettings;
+  }
+
+  async updateRecordingSettings(cameraId: number, settings: Partial<InsertRecordingSetting>): Promise<RecordingSetting | undefined> {
+    const [updated] = await db.update(recordingSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(recordingSettings.cameraId, cameraId))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Motion Events
+  async createMotionEvent(event: InsertMotionEvent): Promise<MotionEvent> {
+    const [newEvent] = await db.insert(motionEvents).values(event).returning();
+    return newEvent;
+  }
+
+  async getMotionEventsByCamera(cameraId: number): Promise<MotionEvent[]> {
+    return await db.select().from(motionEvents)
+      .where(eq(motionEvents.cameraId, cameraId))
+      .orderBy(desc(motionEvents.detectedAt));
+  }
+
+  async getMotionEventsByRecording(recordingId: number): Promise<MotionEvent[]> {
+    return await db.select().from(motionEvents)
+      .where(eq(motionEvents.recordingId, recordingId))
+      .orderBy(desc(motionEvents.detectedAt));
+  }
+
+  // Enhanced Recordings
+  async getOldRecordings(cameraId: number, beforeDate: Date): Promise<Recording[]> {
+    return await db.select().from(recordings)
+      .where(and(
+        eq(recordings.cameraId, cameraId),
+        lt(recordings.startTime, beforeDate)
+      ))
+      .orderBy(recordings.startTime);
+  }
+
+  async getRecordingsByTriggerType(triggerType: string): Promise<Recording[]> {
+    return await db.select().from(recordings)
+      .where(eq(recordings.triggerType, triggerType))
+      .orderBy(desc(recordings.startTime));
   }
 }
 
