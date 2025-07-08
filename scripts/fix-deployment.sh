@@ -73,11 +73,31 @@ else
     cat $APP_DIR/.env | grep -v PASSWORD || true
 fi
 
-# Fix 5: Test service startup
+# Fix 5: Open firewall port for external access
+echo "🔥 Opening firewall port 5000..."
+if command -v ufw >/dev/null 2>&1; then
+    sudo ufw allow 5000/tcp
+    sudo ufw reload
+    echo "✅ Firewall configured for port 5000"
+else
+    echo "⚠️  UFW not found, firewall may need manual configuration"
+fi
+
+# Fix 6: Test service startup
 echo "🚀 Testing service startup..."
 if sudo systemctl start skylink-nvr; then
     echo "✅ Service started successfully"
     sudo systemctl status skylink-nvr --no-pager -l
+    
+    # Test network connectivity
+    sleep 3
+    echo "🔍 Testing network connectivity..."
+    if curl -s http://localhost:5000 > /dev/null; then
+        echo "✅ Application responding on localhost:5000"
+        echo "🌐 Should be accessible from network at: http://$(hostname -I | awk '{print $1}'):5000"
+    else
+        echo "❌ Application not responding on localhost:5000"
+    fi
 else
     echo "❌ Service failed to start. Checking logs..."
     sudo journalctl -u skylink-nvr --no-pager -l --since "1 minute ago"
