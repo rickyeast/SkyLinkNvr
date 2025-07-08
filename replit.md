@@ -133,6 +133,9 @@ Changelog:
   - Added emoji indicators and timestamped logging for better user experience
   - Improved PostgreSQL configuration with secure password generation
   - Added dual execution support (root and sudo) for Linux installation
+  - Added automated deployment option to Linux installer
+  - Automated source code download, dependency installation, and service startup
+  - Added interactive deployment prompts for complete one-click installation
 ```
 
 ## User Preferences

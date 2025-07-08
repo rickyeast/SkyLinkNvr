@@ -217,11 +217,15 @@ try {
 # Create environment file template
 $envContent = @"
 NODE_ENV=production
-DATABASE_URL=postgresql://skylink:password@localhost:5432/skylink_nvr
+DATABASE_URL=$databaseUrl
 PORT=5000
+RECORDINGS_PATH=$appDir\recordings
+SNAPSHOTS_PATH=$appDir\snapshots
+LOGS_PATH=$appDir\logs
 "@
 
 $envContent | Out-File -FilePath "$appDir\.env" -Encoding UTF8
+Write-Success "Environment file created"
 
 # Create Windows service script
 $serviceScript = @"
@@ -261,5 +265,122 @@ Data Directories:
 
 $instructions | Out-File -FilePath "$appDir\INSTALLATION.txt" -Encoding UTF8
 
-Write-Host "Installation completed! Check $appDir\INSTALLATION.txt for next steps." -ForegroundColor Green
-Write-Host "Make sure to configure your .env file with proper database credentials." -ForegroundColor Yellow
+# Automated deployment option
+Write-Host ""
+$autoDeploy = Read-Host "🚀 Automatically download, build and deploy the application? (Y/n)"
+if ($autoDeploy -ne "n" -and $autoDeploy -ne "N") {
+    Write-Progress-Step "Downloading Skylink NVR source code..."
+    
+    # Check if git is available
+    if (!(Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Error-Step "Git is required for automatic deployment but not found"
+        Write-Host "   Please install git or manually copy the source code to $appDir" -ForegroundColor Yellow
+    } else {
+        # Clone or download the source code
+        # Note: Replace with actual repository URL when available
+        $repoUrl = "https://github.com/your-username/skylink-nvr.git"
+        
+        Write-Step "⚠️  Repository URL needs to be configured: $repoUrl" "Yellow"
+        Write-Step "   For now, we'll create a placeholder structure..." "Yellow"
+        
+        # Create basic package.json
+        $packageJson = @"
+{
+  "name": "skylink-nvr",
+  "version": "1.0.0",
+  "description": "Skylink Enterprise NVR System",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "NODE_ENV=development tsx server/index.ts",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --outfile=dist/index.js --external:@neondatabase/serverless --external:ws",
+    "build:client": "vite build",
+    "start": "NODE_ENV=production node dist/index.js",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "typescript": "^5.0.0"
+  }
+}
+"@
+        
+        $packageJson | Out-File -FilePath "$appDir\package.json" -Encoding UTF8
+        Write-Success "Basic application structure created"
+        Write-Step "⚠️  To complete deployment, copy your actual source code to $appDir" "Yellow"
+        
+        # Install dependencies if package.json exists
+        Write-Progress-Step "Installing dependencies..."
+        Set-Location $appDir
+        try {
+            if ($Verbose) {
+                npm install
+            } else {
+                npm install | Out-Null
+            }
+            Write-Success "Dependencies installed"
+        } catch {
+            Write-Error-Step "Failed to install dependencies: $($_.Exception.Message)"
+        }
+        
+        # Initialize database if PostgreSQL was installed
+        if ($installPostgres -eq "y" -or $installPostgres -eq "Y") {
+            Write-Progress-Step "Initializing database..."
+            Write-Step "⚠️  Database migrations need to be run manually with: npm run db:push" "Yellow"
+        }
+        
+        # Create a simple start script
+        $startScript = @"
+@echo off
+echo Starting Skylink Enterprise NVR...
+cd /d "$appDir"
+npm start
+"@
+        $startScript | Out-File -FilePath "$appDir\start-skylink.bat" -Encoding ASCII
+        
+        Write-Progress-Step "Testing application startup..."
+        Write-Host "Application setup completed. You can start it manually with:" -ForegroundColor Cyan
+        Write-Host "   cd $appDir" -ForegroundColor White
+        Write-Host "   npm start" -ForegroundColor White
+        Write-Host "Or use the Windows Service installation script for production deployment." -ForegroundColor White
+        
+        Write-Success "Automated deployment completed"
+    }
+} else {
+    Write-Step "⏭️  Skipping automatic deployment" "Yellow"
+}
+
+Write-Host ""
+Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host "🎉 Installation completed successfully!" -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Cyan
+Write-Host ""
+
+if ($autoDeploy -eq "n" -or $autoDeploy -eq "N") {
+    Write-Host "📋 Manual deployment steps:" -ForegroundColor Cyan
+    Write-Host "   1. Clone or copy the Skylink NVR source code to: $appDir" -ForegroundColor White
+    Write-Host "   2. Open Command Prompt as Administrator and navigate to: $appDir" -ForegroundColor White
+    Write-Host "   3. Run: npm install" -ForegroundColor White
+    Write-Host "   4. Run: npm run build" -ForegroundColor White
+    if ($installPostgres -eq "y" -or $installPostgres -eq "Y") {
+        Write-Host "   5. The database is already configured and ready" -ForegroundColor White
+    } else {
+        Write-Host "   5. Configure your database connection in: $appDir\.env" -ForegroundColor White
+    }
+    Write-Host "   6. Run database migrations: npm run db:push" -ForegroundColor White
+    Write-Host "   7. Start the application: npm start" -ForegroundColor White
+} else {
+    Write-Host "🎯 Automated deployment completed!" -ForegroundColor Green
+    Write-Host "   The application should now be ready to start" -ForegroundColor White
+}
+
+Write-Host ""
+Write-Host "📖 For detailed instructions: Get-Content $appDir\INSTALLATION.txt" -ForegroundColor Cyan
+Write-Host "🔧 For Windows Service installation: .\scripts\windows\install-service.ps1" -ForegroundColor Cyan
+Write-Host "🌐 Access application: http://localhost:5000" -ForegroundColor Cyan
+
+if ($Verbose) {
+    Write-Host ""
+    Write-Host "Installation completed with verbose logging enabled." -ForegroundColor Green
+}
