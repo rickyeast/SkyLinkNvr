@@ -45,16 +45,12 @@ export function RecordingSettings({ cameraId, cameraName }: RecordingSettingsPro
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading } = useQuery({
-    queryKey: ['/api/recording/config', cameraId],
-    queryFn: () => apiRequest(`/api/recording/config/${cameraId}`)
+    queryKey: ['/api/recording/config', cameraId]
   });
 
   const updateSettingsMutation = useMutation({
     mutationFn: (updatedSettings: Partial<RecordingSettings>) =>
-      apiRequest(`/api/recording/config/${cameraId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updatedSettings)
-      }),
+      apiRequest('PUT', `/api/recording/config/${cameraId}`, updatedSettings),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recording/config', cameraId] });
       toast({

@@ -285,13 +285,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Recording routes
-  try {
-    const recordingRoutes = await import('./routes/recording');
-    app.use('/api/recording', recordingRoutes.default);
-  } catch (error) {
-    console.log('Recording routes not available:', error.message);
-  }
+  // Recording control routes
+  app.get("/api/recording/active", async (req, res) => {
+    try {
+      const activeRecordings = await recordingService.getActiveRecordings();
+      res.json(activeRecordings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get active recordings" });
+    }
+  });
+
+  app.post("/api/recording/start/:cameraId", async (req, res) => {
+    try {
+      const cameraId = parseInt(req.params.cameraId);
+      const recording = await recordingService.startRecording(cameraId, 'manual');
+      if (recording) {
+        res.json({ success: true, recording });
+      } else {
+        res.status(400).json({ error: "Failed to start recording" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to start recording" });
+    }
+  });
+
+  app.post("/api/recording/stop/:cameraId", async (req, res) => {
+    try {
+      const cameraId = parseInt(req.params.cameraId);
+      const stopped = await recordingService.stopRecording(cameraId);
+      res.json({ success: stopped });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to stop recording" });
+    }
+  });
+
+  app.get("/api/recording/config/:cameraId", async (req, res) => {
+    try {
+      const cameraId = parseInt(req.params.cameraId);
+      const settings = await storage.getRecordingSettings(cameraId);
+      
+      // Return default settings if none exist
+      if (!settings) {
+        const defaultSettings = {
+          cameraId,
+          continuousRecording: false,
+          motionTriggered: false,
+          scheduledRecording: false,
+          motionSensitivity: 0.7,
+          preRecordSeconds: 5,
+          postRecordSeconds: 10,
+          maxClipDuration: 300,
+          retentionDays: 30,
+          schedule: []
+        };
+        res.json(defaultSettings);
+      } else {
+        res.json(settings);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get recording settings" });
+    }
+  });
+
+  app.put("/api/recording/config/:cameraId", async (req, res) => {
+    try {
+      const cameraId = parseInt(req.params.cameraId);
+      const settings = req.body;
+      
+      const existing = await storage.getRecordingSettings(cameraId);
+      if (existing) {
+        const updated = await storage.updateRecordingSettings(cameraId, settings);
+        res.json(updated);
+      } else {
+        const created = await storage.createRecordingSettings({ ...settings, cameraId });
+        res.json(created);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update recording settings" });
+    }
+  });
+
+  app.get("/api/recording/motion-events/recording/:recordingId", async (req, res) => {
+    try {
+      const recordingId = parseInt(req.params.recordingId);
+      const events = await storage.getMotionEventsByRecording(recordingId);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get motion events" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

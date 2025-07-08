@@ -41,13 +41,11 @@ export default function RecordingsPage() {
   const [activeTab, setActiveTab] = useState("library");
 
   const { data: cameras } = useQuery({
-    queryKey: ['/api/cameras'],
-    queryFn: () => apiRequest('/api/cameras')
+    queryKey: ['/api/cameras']
   });
 
   const { data: activeRecordings, refetch: refetchActiveRecordings } = useQuery({
     queryKey: ['/api/recording/active'],
-    queryFn: () => apiRequest('/api/recording/active'),
     refetchInterval: 5000 // Refresh every 5 seconds
   });
 
@@ -55,7 +53,7 @@ export default function RecordingsPage() {
 
   const handleStartRecording = async (cameraId: number) => {
     try {
-      await apiRequest(`/api/recording/start/${cameraId}`, { method: 'POST' });
+      await apiRequest('POST', `/api/recording/start/${cameraId}`);
       refetchActiveRecordings();
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -64,7 +62,7 @@ export default function RecordingsPage() {
 
   const handleStopRecording = async (cameraId: number) => {
     try {
-      await apiRequest(`/api/recording/stop/${cameraId}`, { method: 'POST' });
+      await apiRequest('POST', `/api/recording/stop/${cameraId}`);
       refetchActiveRecordings();
     } catch (error) {
       console.error('Failed to stop recording:', error);

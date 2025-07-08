@@ -68,13 +68,12 @@ export function ClipViewer({ cameraId }: ClipViewerProps) {
       const params = new URLSearchParams();
       if (cameraId) params.append('cameraId', cameraId.toString());
       if (filterTriggerType !== 'all') params.append('triggerType', filterTriggerType);
-      return apiRequest(`/api/recordings?${params}`);
+      return fetch(`/api/recordings?${params}`).then(res => res.json());
     }
   });
 
   const { data: motionEvents } = useQuery({
     queryKey: ['/api/recording/motion-events', selectedRecording?.id],
-    queryFn: () => apiRequest(`/api/recording/motion-events/recording/${selectedRecording?.id}`),
     enabled: !!selectedRecording
   });
 
