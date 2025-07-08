@@ -163,13 +163,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recording routes
   app.get("/api/recordings", async (req, res) => {
     try {
-      const cameraId = req.query.cameraId ? parseInt(req.query.cameraId as string) : undefined;
-      if (cameraId) {
-        const recordings = await storage.getRecordingsByCamera(cameraId);
-        res.json(recordings);
+      const { cameraId, triggerType } = req.query;
+      
+      let recordings;
+      if (triggerType && triggerType !== 'all') {
+        recordings = await storage.getRecordingsByTriggerType(triggerType as string);
+      } else if (cameraId) {
+        recordings = await storage.getRecordingsByCamera(parseInt(cameraId as string));
       } else {
-        res.status(400).json({ error: "Camera ID required" });
+        recordings = await storage.getAllRecordings();
       }
+      
+      res.json(recordings);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch recordings" });
     }
@@ -281,8 +286,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recording routes
-  const recordingRoutes = await import('./routes/recording');
-  app.use('/api/recording', recordingRoutes.default);
+  try {
+    const recordingRoutes = await import('./routes/recording');
+    app.use('/api/recording', recordingRoutes.default);
+  } catch (error) {
+    console.log('Recording routes not available:', error.message);
+  }
 
   const httpServer = createServer(app);
   return httpServer;

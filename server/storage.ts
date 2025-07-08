@@ -1,11 +1,13 @@
 import { 
-  users, cameras, recordings, aiDetections, systemHealth, cameraTemplates,
+  users, cameras, recordings, aiDetections, systemHealth, cameraTemplates, recordingSettings, motionEvents,
   type User, type InsertUser,
   type Camera, type InsertCamera,
   type Recording, type InsertRecording,
   type AiDetection, type InsertAiDetection,
   type SystemHealth, type InsertSystemHealth,
-  type CameraTemplate, type InsertCameraTemplate
+  type CameraTemplate, type InsertCameraTemplate,
+  type RecordingSetting, type InsertRecordingSetting,
+  type MotionEvent, type InsertMotionEvent
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
@@ -25,6 +27,7 @@ export interface IStorage {
   updateCameraStatus(id: number, status: string): Promise<boolean>;
 
   // Recordings
+  getAllRecordings(): Promise<Recording[]>;
   getRecordingsByCamera(cameraId: number): Promise<Recording[]>;
   getRecording(id: number): Promise<Recording | undefined>;
   createRecording(recording: InsertRecording): Promise<Recording>;
@@ -124,6 +127,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(recordings)
       .where(eq(recordings.cameraId, cameraId))
+      .orderBy(desc(recordings.startTime));
+  }
+
+  async getAllRecordings(): Promise<Recording[]> {
+    return await db
+      .select()
+      .from(recordings)
       .orderBy(desc(recordings.startTime));
   }
 
