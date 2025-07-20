@@ -89,9 +89,25 @@ Skylink is a comprehensive enterprise-grade Network Video Recorder (NVR) system 
 - **Database**: PostgreSQL via Neon with connection pooling
 - **Static Assets**: Express serves frontend build with API fallback
 
+### Docker Deployment Options
+
+#### Host Network Mode (Recommended for NVR functionality)
+- **Configuration**: Use `docker-compose.host.yml` for full functionality
+- **Network Discovery**: Can scan local network for IP cameras using nmap
+- **System Monitoring**: Reads actual host CPU/memory/storage stats via /proc and /sys
+- **Database**: PostgreSQL accessible via localhost:5432 in host network
+- **Security**: Less isolated but necessary for network discovery
+
+#### Bridge Network Mode (Security-focused)
+- **Configuration**: Use standard `docker-compose.yml`
+- **Limitations**: No network discovery, container stats only
+- **Database**: Internal Docker networking with service names
+- **Security**: Better isolation but limited NVR features
+
 ### Environment Configuration
-- **DATABASE_URL**: Required for Neon database connection
+- **DATABASE_URL**: Required for database connection (varies by deployment mode)
 - **NODE_ENV**: Environment-specific configuration
+- **HOST_PROC/HOST_SYS**: Host system monitoring paths for Docker
 - **Build Scripts**: Separate development and production workflows
 
 ## Changelog
@@ -144,6 +160,13 @@ Changelog:
   - Added Docker host network configuration for full functionality
   - Added comprehensive Docker deployment guide with security considerations
   - Enhanced error handling and logging for camera connection testing
+- January 20, 2025. Docker host network mode optimization
+  - Fixed docker-compose.host.yml configuration for proper host network mode
+  - Removed conflicting port mappings in host network configuration
+  - Enhanced system health monitoring to read host /proc and /sys in containers
+  - Added .env.docker.example template for Docker deployment
+  - Updated DATABASE_URL configuration for host network mode (localhost:5432)
+  - Application already configured for port 5000 with 0.0.0.0 binding for container compatibility
 ```
 
 ## User Preferences

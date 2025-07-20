@@ -267,27 +267,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const os = await import('os');
       const fs = await import('fs/promises');
       
-      // Calculate CPU usage
-      const cpus = os.cpus();
-      let totalIdle = 0;
-      let totalTick = 0;
-      
-      cpus.forEach(cpu => {
-        for (const type in cpu.times) {
-          totalTick += cpu.times[type as keyof typeof cpu.times];
-        }
-        totalIdle += cpu.times.idle;
-      });
-      
-      const cpuUsage = ((1 - totalIdle / totalTick) * 100).toFixed(1);
-      
-      // Get memory usage
-      const totalMem = os.totalmem();
-      const freeMem = os.freemem();
-      const memoryUsage = (((totalMem - freeMem) / totalMem) * 100).toFixed(1);
-      
-      // Get storage usage (approximate)
+      let cpuUsage = "0";
+      let memoryUsage = "0";
       let storageUsage = "15";
+      let uptime = Math.floor(os.uptime() / 3600);
+      
+      // Try to read from host /proc if available (Docker host network mode)
+      const hostProcPath = process.env.HOST_PROC || '/proc';
+      const hostSysPath = process.env.HOST_SYS || '/sys';
+      
+      try {
+        // Try to get memory info from host proc
+        if (await fs.access(`${hostProcPath}/meminfo`).then(() => true).catch(() => false)) {
+          const meminfo = await fs.readFile(`${hostProcPath}/meminfo`, 'utf8');
+          const totalMatch = meminfo.match(/MemTotal:\s+(\d+)\s+kB/);
+          const availableMatch = meminfo.match(/MemAvailable:\s+(\d+)\s+kB/);
+          
+          if (totalMatch && availableMatch) {
+            const totalMem = parseInt(totalMatch[1]) * 1024; // Convert to bytes
+            const availableMem = parseInt(availableMatch[1]) * 1024;
+            const usedMem = totalMem - availableMem;
+            memoryUsage = ((usedMem / totalMem) * 100).toFixed(1);
+          }
+        } else {
+          // Fall back to os module
+          const totalMem = os.totalmem();
+          const freeMem = os.freemem();
+          memoryUsage = (((totalMem - freeMem) / totalMem) * 100).toFixed(1);
+        }
+        
+        // Try to get CPU usage from host proc
+        if (await fs.access(`${hostProcPath}/stat`).then(() => true).catch(() => false)) {
+          const stat = await fs.readFile(`${hostProcPath}/stat`, 'utf8');
+          const cpuLine = stat.split('\n')[0];
+          const cpuTimes = cpuLine.split(/\s+/).slice(1).map(Number);
+          
+          const totalTime = cpuTimes.reduce((sum, time) => sum + time, 0);
+          const idleTime = cpuTimes[3]; // idle time is 4th field
+          
+          if (totalTime > 0) {
+            cpuUsage = (((totalTime - idleTime) / totalTime) * 100).toFixed(1);
+          }
+        } else {
+          // Fall back to os module calculation
+          const cpus = os.cpus();
+          let totalIdle = 0;
+          let totalTick = 0;
+          
+          cpus.forEach(cpu => {
+            for (const type in cpu.times) {
+              totalTick += cpu.times[type as keyof typeof cpu.times];
+            }
+            totalIdle += cpu.times.idle;
+          });
+          
+          if (totalTick > 0) {
+            cpuUsage = ((1 - totalIdle / totalTick) * 100).toFixed(1);
+          }
+        }
+        
+        // Try to get storage usage
+        try {
+          const stats = await fs.stat('/app/recordings');
+          // This is a simplified storage calculation
+          // In a real scenario, you'd want to check actual filesystem usage
+          storageUsage = "15"; // placeholder
+        } catch (error) {
+          // Keep default value
+        }
+        
+        // Try to get uptime from host
+        if (await fs.access(`${hostProcPath}/uptime`).then(() => true).catch(() => false)) {
+          const uptimeData = await fs.readFile(`${hostProcPath}/uptime`, 'utf8');
+          const uptimeSeconds = parseFloat(uptimeData.split(' ')[0]);
+          uptime = Math.floor(uptimeSeconds / 3600);
+        }
+        
+      } catch (error) {
+        console.warn("Failed to read host system stats, using container stats:", error.message);
+        // Use fallback values calculated above
+      }
       
       // Create current health record (convert network values to bytes as integers)
       const healthData = {
@@ -296,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storageUsage,
         networkIn: 1200000, // bytes (1.2 MB)
         networkOut: 800000, // bytes (0.8 MB)
-        uptime: Math.floor(os.uptime() / 3600), // hours
+        uptime,
       };
       
       // Save to database

@@ -61,6 +61,11 @@ services:
     volumes:
       - /proc:/host/proc:ro   # Host process info
       - /sys:/host/sys:ro     # Host system info
+    environment:
+      - DATABASE_URL=postgresql://skylink:password@localhost:5432/skylink_nvr
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
+    # Note: No port mapping needed in host network mode
 ```
 
 ## Environment Variables for Docker
@@ -93,8 +98,8 @@ cp docker-compose.host.yml docker-compose.yml
 # Use default docker-compose.yml
 
 # 3. Configure environment
-cp .env.example .env
-# Edit .env with your settings
+cp .env.docker.example .env
+# Edit .env with your database password and settings
 
 # 4. Build and start
 docker-compose up -d
