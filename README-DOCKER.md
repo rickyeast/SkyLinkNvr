@@ -106,7 +106,28 @@ The application automatically detects the environment:
 - Falls back to Node.js `os` module for container stats
 - Shows container-specific resource usage
 
+## Testing Your Configuration
+
+Use the test script to verify your Docker setup:
+```bash
+chmod +x test-docker.sh
+./test-docker.sh
+```
+
 ## Troubleshooting
+
+### Connection Refused on localhost:5000
+This usually happens when:
+1. Development server is already running on port 5000 (stop it first)
+2. Database connection is failing in host network mode
+3. Container failed to start properly
+
+**Solutions:**
+```bash
+# Stop development server first
+# Then test Docker deployment
+./test-docker.sh
+```
 
 ### Network Discovery Not Working
 ```bash
