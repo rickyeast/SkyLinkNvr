@@ -3,7 +3,15 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// Configure WebSocket for Neon Database only if needed
+// In Docker/production environments, disable WebSocket pooling to avoid connection issues
+if (process.env.NODE_ENV === 'development') {
+  neonConfig.webSocketConstructor = ws;
+} else {
+  // Disable WebSocket pooling in production/Docker to use HTTP-based connections
+  neonConfig.useSecureWebSocket = false;
+  neonConfig.pipelineConnect = false;
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(

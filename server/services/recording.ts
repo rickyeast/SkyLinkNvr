@@ -28,7 +28,10 @@ class RecordingService {
 
   constructor() {
     this.ensureRecordingsDirectory();
-    this.initializeScheduledRecordings();
+    // Initialize scheduled recordings asynchronously to prevent blocking startup
+    setTimeout(() => {
+      this.initializeScheduledRecordings();
+    }, 2000);
   }
 
   private ensureRecordingsDirectory() {
@@ -39,12 +42,17 @@ class RecordingService {
 
   async initializeScheduledRecordings() {
     try {
+      // Add a small delay to ensure database connection is established
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const cameras = await storage.getAllCameras();
       for (const camera of cameras) {
         await this.setupScheduledRecording(camera.id);
       }
+      console.log(`Initialized scheduled recordings for ${cameras.length} cameras`);
     } catch (error) {
       console.error('Failed to initialize scheduled recordings:', error);
+      // Don't throw the error to prevent service startup failure
     }
   }
 

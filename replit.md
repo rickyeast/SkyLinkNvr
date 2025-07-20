@@ -175,6 +175,13 @@ Changelog:
   - Updated deployment scripts with proper database URL handling for both modes
   - Fixed Docker health check endpoint and network connectivity issues
   - Note: Docker testing requires local environment - not available in Replit
+- January 20, 2025. Fixed WebSocket connection errors in Docker
+  - Resolved wss://localhost/v2 error by configuring Neon Database for Docker environments
+  - Disabled WebSocket pooling in production to use HTTP-based connections
+  - Added delayed initialization for recording service to prevent startup errors
+  - Changed host network mode to use port 8080 to avoid conflicts
+  - Added comprehensive Docker troubleshooting guide
+  - Fixed database URL configuration in host network mode
 ```
 
 ## User Preferences
