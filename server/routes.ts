@@ -5,6 +5,7 @@ import { insertCameraSchema, insertRecordingSchema, insertAiDetectionSchema, ins
 import { onvifService } from "./services/onvif";
 import { streamingService } from "./services/streaming";
 import { aiDetectionService } from "./services/ai-detection";
+import { recordingService } from "./services/recording";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Camera routes

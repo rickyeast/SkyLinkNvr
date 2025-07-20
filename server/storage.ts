@@ -10,7 +10,7 @@ import {
   type MotionEvent, type InsertMotionEvent
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, lt } from "drizzle-orm";
 
 export interface IStorage {
   // Users
