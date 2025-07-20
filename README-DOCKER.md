@@ -75,11 +75,15 @@ docker-compose up -d --build
 
 ## Port Configuration
 
-The application is already configured to work correctly in both modes:
+The application uses different ports for different network modes to avoid conflicts:
 
-- **Server binding:** `0.0.0.0:5000` (accessible from any interface)
-- **Host network mode:** Port 5000 is directly available on host
-- **Bridge network mode:** Port 5000 is mapped to host
+- **Bridge network mode:** Port 5000 (standard Docker port mapping)
+- **Host network mode:** Port 8080 (to avoid host network conflicts)
+- **Server binding:** `0.0.0.0:{PORT}` (accessible from any interface)
+
+Access URLs:
+- **Bridge mode:** http://localhost:5000
+- **Host network mode:** http://localhost:8080
 
 ## Database Configuration
 

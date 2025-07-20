@@ -45,11 +45,11 @@ if docker-compose up -d --build; then
         
         # Test if the API is accessible
         echo "Testing API endpoint..."
-        if curl -f -s http://127.0.0.1:5000/api/system/health > /dev/null; then
-            echo "✅ API is responding at http://127.0.0.1:5000"
+        if curl -f -s http://127.0.0.1:8080/api/system/health > /dev/null; then
+            echo "✅ API is responding at http://127.0.0.1:8080"
             echo "✅ Host network mode is working correctly!"
             echo
-            echo "You can now access the NVR at: http://localhost:5000"
+            echo "You can now access the NVR at: http://localhost:8080"
         else
             echo "❌ API is not responding. Checking logs..."
             docker-compose logs skylink-nvr | tail -20

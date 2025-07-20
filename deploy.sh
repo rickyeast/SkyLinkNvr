@@ -50,20 +50,23 @@ if [ "$choice" = "1" ]; then
     # Create environment file for host network mode
     if [ ! -f .env ]; then
         cp .env.docker.example .env
-        # Ensure host network database URL
+        # Configure for host network mode
         sed -i 's/@postgres:5432/@127.0.0.1:5432/g' .env
+        sed -i 's/PORT=5000/PORT=8080/g' .env
         echo "✅ Created .env file configured for host network mode"
         echo
         echo "⚙️  Please edit .env file and set your database password:"
         echo "   - POSTGRES_PASSWORD=your_secure_password"
         echo "   - DATABASE_URL is set to 127.0.0.1:5432 for host network mode"
+        echo "   - PORT=8080 for host network mode"
         echo
         read -p "Press Enter after you've configured the .env file..."
     else
         echo "✅ Using existing .env file"
-        # Ensure correct database URL for host network
+        # Ensure correct settings for host network
         sed -i 's/@postgres:5432/@127.0.0.1:5432/g' .env
-        echo "✅ Updated .env for host network mode"
+        sed -i 's/PORT=5000/PORT=8080/g' .env
+        echo "✅ Updated .env for host network mode (port 8080)"
     fi
     
 elif [ "$choice" = "2" ]; then
@@ -76,14 +79,16 @@ elif [ "$choice" = "2" ]; then
     # Create environment file for bridge network mode  
     if [ ! -f .env ]; then
         cp .env.docker.example .env
-        # Modify for bridge network mode
+        # Configure for bridge network mode
         sed -i 's/@127.0.0.1:5432/@postgres:5432/g' .env
+        sed -i 's/PORT=8080/PORT=5000/g' .env
         echo "✅ Created .env file configured for bridge network"
     else
         echo "✅ Using existing .env file"
-        # Ensure correct database URL for bridge network
+        # Ensure correct settings for bridge network
         sed -i 's/@127.0.0.1:5432/@postgres:5432/g' .env
-        echo "✅ Updated .env for bridge network mode"
+        sed -i 's/PORT=8080/PORT=5000/g' .env
+        echo "✅ Updated .env for bridge network mode (port 5000)"
     fi
     
 else
@@ -102,7 +107,11 @@ if docker-compose up -d --build; then
     echo "📊 System Status:"
     docker-compose ps
     echo
-    echo "🌐 Access your NVR at: http://localhost:5000"
+    if [ "$choice" = "1" ]; then
+        echo "🌐 Access your NVR at: http://localhost:8080"
+    else
+        echo "🌐 Access your NVR at: http://localhost:5000"
+    fi
     echo "📄 View logs with: docker-compose logs -f skylink-nvr"
     echo "🔧 Stop with: docker-compose down"
     echo

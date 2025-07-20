@@ -61,10 +61,11 @@ COPY --from=build --chown=skylink:nodejs /app/node_modules ./node_modules
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://127.0.0.1:5000/api/system/health || exit 1
+  CMD curl -f http://127.0.0.1:${PORT:-5000}/api/system/health || exit 1
 
 USER skylink
 EXPOSE 5000
+EXPOSE 8080
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
