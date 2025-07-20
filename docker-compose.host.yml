@@ -1,0 +1,39 @@
+# Docker Compose configuration for host network access
+# Use this for network discovery and system stats
+version: '3.8'
+
+services:
+  skylink-nvr:
+    build: .
+    network_mode: host
+    privileged: true
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - recordings_data:/app/recordings
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: skylink_nvr
+      POSTGRES_USER: skylink
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  recordings_data:

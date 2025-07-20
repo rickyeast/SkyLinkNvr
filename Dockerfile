@@ -39,10 +39,14 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
-# Install system dependencies for production
+# Install system dependencies for production including network tools
 RUN apk add --no-cache \
     dumb-init \
-    curl
+    curl \
+    nmap \
+    iputils \
+    net-tools \
+    procps
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \

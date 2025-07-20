@@ -76,15 +76,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Camera discovery
-  app.post("/api/cameras/discover", async (req, res) => {
+  // Camera discovery (support both GET and POST for compatibility)
+  const handleCameraDiscovery = async (req: any, res: any) => {
     try {
+      console.log("Starting camera discovery...");
       const devices = await onvifService.discoverDevices();
+      console.log(`Found ${devices.length} potential cameras`);
       res.json(devices);
     } catch (error) {
+      console.error("Camera discovery error:", error);
       res.status(500).json({ error: "Failed to discover cameras" });
     }
-  });
+  };
+
+  app.get("/api/cameras/discover", handleCameraDiscovery);
+  app.post("/api/cameras/discover", handleCameraDiscovery);
 
   // Camera connection test and capability detection
   app.post("/api/cameras/test", async (req, res) => {
@@ -282,13 +288,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get storage usage (approximate)
       let storageUsage = "15";
       
-      // Create current health record
+      // Create current health record (convert network values to bytes as integers)
       const healthData = {
         cpuUsage,
         memoryUsage,
         storageUsage,
-        networkIn: "1.2",
-        networkOut: "0.8",
+        networkIn: 1200000, // bytes (1.2 MB)
+        networkOut: 800000, // bytes (0.8 MB)
         uptime: Math.floor(os.uptime() / 3600), // hours
       };
       

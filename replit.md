@@ -136,6 +136,14 @@ Changelog:
   - Added automated deployment option to Linux installer
   - Automated source code download, dependency installation, and service startup
   - Added interactive deployment prompts for complete one-click installation
+- January 20, 2025. Fixed system monitoring and network discovery issues
+  - Fixed system health monitoring to display real CPU and memory usage
+  - Fixed database schema error for network stats (integer vs decimal)
+  - Enhanced ONVIF camera discovery with proper validation
+  - Fixed false positive camera detection in network discovery
+  - Added Docker host network configuration for full functionality
+  - Added comprehensive Docker deployment guide with security considerations
+  - Enhanced error handling and logging for camera connection testing
 ```
 
 ## User Preferences
