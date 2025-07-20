@@ -26,6 +26,12 @@ fi
 echo "Testing Host Network Mode Configuration..."
 cp docker-compose.host.yml docker-compose.yml
 
+# Update .env for host network mode if it exists
+if [ -f .env ]; then
+    echo "Updating .env for host network mode..."
+    sed -i 's/@postgres:5432/@127.0.0.1:5432/g' .env
+fi
+
 echo "Building and starting containers..."
 if docker-compose up -d --build; then
     echo "Containers started. Waiting for services to be ready..."

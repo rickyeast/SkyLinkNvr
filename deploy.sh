@@ -47,18 +47,23 @@ if [ "$choice" = "1" ]; then
     cp docker-compose.host.yml docker-compose.yml
     echo "✅ Using docker-compose.host.yml configuration"
     
-    # Create environment file
+    # Create environment file for host network mode
     if [ ! -f .env ]; then
         cp .env.docker.example .env
-        echo "✅ Created .env file from template"
+        # Ensure host network database URL
+        sed -i 's/@postgres:5432/@127.0.0.1:5432/g' .env
+        echo "✅ Created .env file configured for host network mode"
         echo
         echo "⚙️  Please edit .env file and set your database password:"
         echo "   - POSTGRES_PASSWORD=your_secure_password"
-        echo "   - DATABASE_URL will use localhost:5432 for host network mode"
+        echo "   - DATABASE_URL is set to 127.0.0.1:5432 for host network mode"
         echo
         read -p "Press Enter after you've configured the .env file..."
     else
         echo "✅ Using existing .env file"
+        # Ensure correct database URL for host network
+        sed -i 's/@postgres:5432/@127.0.0.1:5432/g' .env
+        echo "✅ Updated .env for host network mode"
     fi
     
 elif [ "$choice" = "2" ]; then
@@ -68,14 +73,17 @@ elif [ "$choice" = "2" ]; then
     # docker-compose.yml is already the bridge mode configuration
     echo "✅ Using standard docker-compose.yml configuration"
     
-    # Create environment file if needed
+    # Create environment file for bridge network mode  
     if [ ! -f .env ]; then
         cp .env.docker.example .env
         # Modify for bridge network mode
-        sed -i 's/localhost:5432/postgres:5432/g' .env
+        sed -i 's/@127.0.0.1:5432/@postgres:5432/g' .env
         echo "✅ Created .env file configured for bridge network"
     else
         echo "✅ Using existing .env file"
+        # Ensure correct database URL for bridge network
+        sed -i 's/@127.0.0.1:5432/@postgres:5432/g' .env
+        echo "✅ Updated .env for bridge network mode"
     fi
     
 else
