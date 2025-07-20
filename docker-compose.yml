@@ -2,25 +2,28 @@ version: '3.8'
 
 services:
   skylink-nvr:
-    build:
+    build: 
       context: .
       target: production
-    ports:
-      - "5000:5000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
+    network_mode: host
+    privileged: true
     volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./recordings:/app/recordings
       - ./snapshots:/app/snapshots
       - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
     restart: unless-stopped
     depends_on:
       - postgres
-    networks:
-      - skylink-network
+      - redis
 
-  # Optional: Include PostgreSQL if not using external database
   postgres:
     image: postgres:15-alpine
     environment:
@@ -36,7 +39,6 @@ services:
     networks:
       - skylink-network
 
-  # Optional: Redis for session storage and caching
   redis:
     image: redis:7-alpine
     ports:

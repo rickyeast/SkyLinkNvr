@@ -167,6 +167,14 @@ Changelog:
   - Added .env.docker.example template for Docker deployment
   - Updated DATABASE_URL configuration for host network mode (localhost:5432)
   - Application already configured for port 5000 with 0.0.0.0 binding for container compatibility
+- January 20, 2025. Complete Docker host network mode fix
+  - Added missing Redis service to docker-compose.host.yml (was present in working bridge mode)
+  - Created missing init.sql database initialization file
+  - Fixed volume mappings to use local directories instead of Docker volumes
+  - Standardized environment variables between bridge and host network modes
+  - Updated deployment scripts with proper database URL handling for both modes
+  - Fixed Docker health check endpoint and network connectivity issues
+  - Note: Docker testing requires local environment - not available in Replit
 ```
 
 ## User Preferences
