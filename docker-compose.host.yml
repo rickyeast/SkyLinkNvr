@@ -55,4 +55,5 @@ volumes:
   redis_data:
 
 networks:
-    network_mode: host
+  skylink-network:
+    driver: bridge
