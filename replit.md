@@ -2,17 +2,17 @@
 
 ## Overview
 
-Skylink is a comprehensive enterprise-grade Network Video Recorder (NVR) system built for advanced IP camera management and surveillance. The application provides live video streaming, recording capabilities, AI-powered detection, and comprehensive camera management through a modern web interface.
+Skylink is a comprehensive enterprise-grade Network Video Recorder (NVR) backend system built for advanced IP camera management and surveillance. The application provides a robust REST API for live video streaming, recording capabilities, AI-powered detection, and comprehensive camera management. It's designed to be deployed as a backend service that external applications can connect to via HTTP API endpoints.
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React 18 with TypeScript for type safety and modern development
-- **Routing**: Wouter for lightweight client-side routing
-- **State Management**: TanStack Query (React Query) for efficient server state management and caching
-- **UI Components**: Radix UI primitives with shadcn/ui component library for accessibility and consistency
-- **Styling**: Tailwind CSS with custom Ubiquiti-inspired color palette and dark theme
-- **Build Tool**: Vite for fast development and optimized production builds
+### API Architecture
+- **REST API**: Comprehensive RESTful endpoints for all NVR functionality
+- **Real-time Features**: WebSocket support for live streaming capabilities
+- **Cross-Origin Support**: CORS configured for external frontend applications
+- **Documentation**: Self-documenting API endpoints with structured responses
+- **Authentication**: Token-based authentication system for secure API access
+- **Reference Frontend**: Included React 18 demo frontend for API testing and reference
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
@@ -182,10 +182,18 @@ Changelog:
   - Changed host network mode to use port 8080 to avoid conflicts
   - Added comprehensive Docker troubleshooting guide
   - Fixed database URL configuration in host network mode
+- January 21, 2025. Configured as backend API service for external frontends
+  - Updated architecture to focus on REST API backend functionality
+  - Prepared for deployment as standalone NVR service for Windows/Linux/Docker
+  - Maintained reference frontend for API testing and demonstration
+  - Optimized for external application integration via HTTP API
 ```
 
 ## User Preferences
 
 ```
 Preferred communication style: Simple, everyday language.
+Project Architecture: Backend API service for external frontends
+Deployment Target: Windows/Linux/Docker hosted application
+Frontend Integration: Separate application will connect to this backend via REST API
 ```
