@@ -93,7 +93,10 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
     },
   });
 
-  const { data: discoveredDevices, refetch: discoverDevices } = useQuery<OnvifDevice[]>({
+  const [discoveredDevices, setDiscoveredDevices] = useState<OnvifDevice[]>([]);
+  const [isRealTimeDiscovery, setIsRealTimeDiscovery] = useState(false);
+
+  const { refetch: discoverDevices } = useQuery<OnvifDevice[]>({
     queryKey: ["/api/cameras/discover"],
     enabled: false,
   });
@@ -121,20 +124,76 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
 
   const handleDiscover = async () => {
     setIsDiscovering(true);
+    setIsRealTimeDiscovery(true);
+    setDiscoveredDevices([]);
+    
     try {
-      await discoverDevices();
-      toast({
-        title: "Discovery Complete",
-        description: "Found network cameras. Select one to configure.",
-      });
+      // Start real-time discovery with Server-Sent Events
+      const eventSource = new EventSource('/api/cameras/discover/stream');
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const device = JSON.parse(event.data);
+          if (device.type === 'device_found') {
+            setDiscoveredDevices(prev => [...prev, device.data]);
+            toast({
+              title: "Camera Found",
+              description: `Found ${device.data.manufacturer} camera at ${device.data.ipAddress}`,
+            });
+          } else if (device.type === 'discovery_complete') {
+            setIsRealTimeDiscovery(false);
+            setIsDiscovering(false);
+            eventSource.close();
+            toast({
+              title: "Discovery Complete",
+              description: `Found ${discoveredDevices.length} cameras. Click any camera to add it.`,
+            });
+          }
+        } catch (e) {
+          console.error('Error parsing discovery event:', e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsRealTimeDiscovery(false);
+        setIsDiscovering(false);
+        eventSource.close();
+        
+        // Fallback to regular discovery
+        discoverDevices().then(result => {
+          if (result.data) {
+            setDiscoveredDevices(result.data);
+            toast({
+              title: "Discovery Complete", 
+              description: `Found ${result.data.length} cameras. Click any camera to add it.`,
+            });
+          }
+        }).catch(() => {
+          toast({
+            title: "Discovery Failed",
+            description: "Unable to discover cameras on the network.",
+            variant: "destructive",
+          });
+        });
+      };
+
+      // Set timeout for discovery
+      setTimeout(() => {
+        if (isRealTimeDiscovery) {
+          eventSource.close();
+          setIsRealTimeDiscovery(false);
+          setIsDiscovering(false);
+        }
+      }, 60000); // 60 second timeout
+
     } catch (error) {
+      setIsDiscovering(false);
+      setIsRealTimeDiscovery(false);
       toast({
-        title: "Discovery Failed", 
-        description: "Unable to discover cameras on the network.",
+        title: "Discovery Failed",
+        description: "Unable to discover cameras on the network.", 
         variant: "destructive",
       });
-    } finally {
-      setIsDiscovering(false);
     }
   };
 
@@ -202,6 +261,17 @@ export function AddCameraDialog({ children }: AddCameraDialogProps) {
     form.setValue("port", device.port);
     form.setValue("onvifUrl", device.onvifUrl);
     form.setValue("rtspUrl", `rtsp://${device.ipAddress}:554/Streaming/Channels/101`);
+    form.setValue("manufacturer", device.manufacturer);
+    form.setValue("model", device.model);
+    
+    // Switch to quick setup tab to show filled form
+    const quickTab = document.querySelector('[value="quick"]') as HTMLElement;
+    if (quickTab) quickTab.click();
+    
+    toast({
+      title: "Camera Selected",
+      description: `${device.manufacturer} ${device.model} details filled in Quick Setup tab`,
+    });
   };
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {

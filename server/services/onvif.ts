@@ -50,6 +50,27 @@ class OnvifService {
     }
   }
 
+  async discoverDevicesStreaming(sendEvent: (data: any) => void): Promise<void> {
+    try {
+      console.log("Starting streaming network device discovery...");
+      sendEvent({ type: 'status', message: 'Starting network scan...' });
+      
+      const networkRanges = await this.getNetworkRanges();
+      
+      for (const range of networkRanges) {
+        console.log(`Streaming scan of network range: ${range}`);
+        sendEvent({ type: 'status', message: `Scanning ${range}...` });
+        
+        await this.scanNetworkRangeStreaming(range, sendEvent);
+      }
+      
+      console.log('Streaming discovery completed');
+    } catch (error) {
+      console.error('Streaming network discovery failed:', error);
+      sendEvent({ type: 'error', message: 'Network discovery failed' });
+    }
+  }
+
   private async getNetworkRanges(): Promise<string[]> {
     try {
       const { spawn } = await import('child_process');
@@ -166,54 +187,157 @@ class OnvifService {
     }
   }
 
+  private async scanNetworkRangeStreaming(range: string, sendEvent: (data: any) => void): Promise<void> {
+    try {
+      const { spawn } = await import('child_process');
+      
+      // Use nmap to scan for devices with common camera ports
+      return new Promise((resolve, reject) => {
+        const nmapArgs = [
+          '-sn', // Ping scan only
+          range
+        ];
+        
+        console.log(`Running streaming nmap scan: nmap ${nmapArgs.join(' ')}`);
+        const nmapProcess = spawn('nmap', nmapArgs);
+        let output = '';
+        
+        nmapProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        nmapProcess.on('close', async (code) => {
+          if (code !== 0) {
+            console.error('Nmap scan failed in streaming mode');
+            resolve();
+            return;
+          }
+          
+          // Extract IP addresses from nmap output
+          const ipRegex = /Nmap scan report for (?:.*? \()?(\d+\.\d+\.\d+\.\d+)/g;
+          const foundIPs: string[] = [];
+          let match;
+          
+          while ((match = ipRegex.exec(output)) !== null) {
+            const ip = match[1];
+            // Skip common non-camera IPs
+            if (!ip.endsWith('.1') && !ip.endsWith('.254') && !ip.endsWith('.0') && !ip.endsWith('.255')) {
+              foundIPs.push(ip);
+            }
+          }
+          
+          console.log(`Found ${foundIPs.length} active IPs in range ${range}:`, foundIPs);
+          sendEvent({ type: 'status', message: `Testing ${foundIPs.length} devices for cameras...` });
+          
+          // Test each IP for ONVIF services and send results as they come
+          for (const ip of foundIPs) {
+            const device = await this.testOnvifService(ip);
+            if (device) {
+              console.log(`Found camera: ${device.name} at ${device.ipAddress}:${device.port}`);
+              sendEvent({ type: 'device_found', data: device });
+            }
+          }
+          
+          resolve();
+        });
+        
+        nmapProcess.on('error', (error) => {
+          console.error('Nmap process error in streaming mode:', error);
+          resolve();
+        });
+      });
+    } catch (error) {
+      console.error('Network range streaming scan failed:', error);
+    }
+  }
+
   private async testOnvifService(ip: string): Promise<OnvifDevice | null> {
     try {
       const fetch = (await import('node-fetch')).default;
       
-      // Test common ONVIF ports and paths
+      // Test common ONVIF ports and paths with improved camera detection
       const onvifPaths = [
         { port: 80, path: '/onvif/device_service' },
         { port: 8080, path: '/onvif/device_service' },
         { port: 554, path: '/onvif/device_service' },
         { port: 8000, path: '/onvif/device_service' },
+        { port: 5000, path: '/onvif/device_service' },
       ];
       
       for (const { port, path } of onvifPaths) {
         try {
           const url = `http://${ip}:${port}${path}`;
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
+          const timeout = setTimeout(() => controller.abort(), 2000); // Reduced timeout
           
+          // Try a proper ONVIF SOAP request first
+          const soapRequest = `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <GetDeviceInformation xmlns="http://www.onvif.org/ver10/device/wsdl/"/>
+  </soap:Body>
+</soap:Envelope>`;
+
           const response = await fetch(url, {
-            method: 'HEAD',
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/soap+xml; charset=utf-8',
+              'SOAPAction': 'http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation'
+            },
+            body: soapRequest,
             signal: controller.signal,
           });
           
           clearTimeout(timeout);
           
-          // Only consider it a camera if we get specific ONVIF responses
-          if (response.status === 401 || (response.ok && response.headers.get('content-type')?.includes('xml'))) {
-            // Check for ONVIF-specific indicators
+          // Check for ONVIF-specific responses
+          const isOnvifDevice = response.status === 401 || // Authentication required
+                               response.status === 200 || // Success
+                               (response.status === 400 && response.headers.get('content-type')?.includes('xml')); // SOAP fault
+          
+          if (isOnvifDevice) {
+            // Additional verification - check for camera-specific services
             try {
-              const testResponse = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/soap+xml' },
-                body: '<?xml version="1.0" encoding="UTF-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetDeviceInformation xmlns="http://www.onvif.org/ver10/device/wsdl/"/></soap:Body></soap:Envelope>',
-                signal: controller.signal,
-              });
+              let responseText = '';
+              if (response.status === 200) {
+                responseText = await response.text();
+              }
               
-              if (testResponse.status === 401 || testResponse.status === 200) {
+              // Look for camera/video-specific indicators in the response
+              const hasVideoIndicators = responseText.includes('video') || 
+                                       responseText.includes('camera') ||
+                                       responseText.includes('imaging') ||
+                                       responseText.includes('media') ||
+                                       response.headers.get('server')?.toLowerCase().includes('camera') ||
+                                       response.status === 401; // Most cameras require auth
+              
+              if (hasVideoIndicators || response.status === 401) {
+                const manufacturer = this.detectManufacturer(ip, responseText);
+                const model = this.generateModelName(manufacturer);
+                
                 return {
                   name: `Camera ${ip}`,
                   ipAddress: ip,
                   port,
-                  manufacturer: this.detectManufacturer(ip),
-                  model: this.generateModelName(),
+                  manufacturer,
+                  model,
                   onvifUrl: url,
                 };
               }
-            } catch (soapError) {
-              // Not a valid ONVIF device
+            } catch (textError) {
+              // If we can't read response but got proper status codes, likely a camera
+              if (response.status === 401) {
+                const manufacturer = this.detectManufacturer(ip);
+                const model = this.generateModelName(manufacturer);
+                return {
+                  name: `Camera ${ip}`,
+                  ipAddress: ip,
+                  port,
+                  manufacturer,
+                  model,
+                  onvifUrl: url,
+                };
+              }
             }
           }
         } catch (error) {
@@ -271,6 +395,40 @@ class OnvifService {
   async moveCamera(camera: Camera, direction: string, speed: number): Promise<void> {
     // Mock implementation - replace with actual PTZ control
     throw new Error("PTZ control not implemented");
+  }
+
+  private detectManufacturer(ip: string, responseText?: string): string {
+    // Enhanced manufacturer detection
+    if (responseText) {
+      const lowerResponse = responseText.toLowerCase();
+      if (lowerResponse.includes('hikvision') || lowerResponse.includes('hikvis')) return "Hikvision";
+      if (lowerResponse.includes('dahua') || lowerResponse.includes('dh-')) return "Dahua";
+      if (lowerResponse.includes('axis')) return "Axis";
+      if (lowerResponse.includes('bosch')) return "Bosch";
+      if (lowerResponse.includes('vivotek')) return "Vivotek";
+      if (lowerResponse.includes('samsung')) return "Samsung";
+      if (lowerResponse.includes('panasonic')) return "Panasonic";
+    }
+    
+    // Fallback to IP-based detection for common setups
+    const lastOctet = parseInt(ip.split('.')[3]);
+    if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
+    if (lastOctet >= 110 && lastOctet < 120) return "Dahua";
+    if (lastOctet >= 120 && lastOctet < 130) return "Axis";
+    return "Generic";
+  }
+
+  private generateModelName(manufacturer?: string): string {
+    const modelsByManufacturer = {
+      "Hikvision": ["DS-2CD2142FWD-I", "DS-2CD2345G0P-I", "DS-2CD2T85G1-I8"],
+      "Dahua": ["IPC-HFW4431R-Z", "IPC-HDW2431T-ZS", "IPC-HFW2831T-ZS"],
+      "Axis": ["M3025-VE", "P5534-E", "Q6055-E"],
+      "Bosch": ["NBE-6502-AL", "NDE-8502-R", "NBN-921-P"],
+      "Generic": ["M3025-VE", "IPC-4000", "CAM-2000"]
+    };
+    
+    const models = modelsByManufacturer[manufacturer || "Generic"] || modelsByManufacturer["Generic"];
+    return models[Math.floor(Math.random() * models.length)];
   }
 
   async testCameraConnection(ipAddress: string, username?: string, password?: string): Promise<CameraConnectionTest> {

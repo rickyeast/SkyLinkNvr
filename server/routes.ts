@@ -24,6 +24,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cameras/discover", handleCameraDiscovery);
   app.post("/api/cameras/discover", handleCameraDiscovery);
 
+  // Streaming discovery endpoint for real-time updates
+  app.get("/api/cameras/discover/stream", (req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    const sendEvent = (data: any) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // Start discovery with streaming updates
+    onvifService.discoverDevicesStreaming(sendEvent)
+      .then(() => {
+        sendEvent({ type: 'discovery_complete' });
+        res.end();
+      })
+      .catch((error) => {
+        sendEvent({ type: 'error', error: error.message });
+        res.end();
+      });
+
+    req.on('close', () => {
+      res.end();
+    });
+  });
+
   // Camera routes
   app.get("/api/cameras", async (req, res) => {
     try {

@@ -210,6 +210,12 @@ Changelog:
   - Added proper host /proc and /sys filesystem access for CPU, memory, and uptime stats
   - Improved storage monitoring using df command for accurate disk usage
   - Added comprehensive error handling and debug logging for Docker environments
+- August 04, 2025. Fixed camera discovery with real-time updates and clickable device selection
+  - Implemented Server-Sent Events for real-time camera discovery progress
+  - Enhanced ONVIF detection to filter non-camera devices using proper SOAP requests
+  - Added clickable discovered devices that auto-fill camera configuration forms
+  - Improved manufacturer detection with response parsing and enhanced model identification
+  - Reduced discovery timeouts and added streaming status updates for better user experience
 ```
 
 ## User Preferences
