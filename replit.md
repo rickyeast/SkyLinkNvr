@@ -187,6 +187,11 @@ Changelog:
   - Prepared for deployment as standalone NVR service for Windows/Linux/Docker
   - Maintained reference frontend for API testing and demonstration
   - Optimized for external application integration via HTTP API
+- August 04, 2025. Fixed ES module compatibility issues
+  - Resolved database import error causing application startup failure
+  - Fixed CommonJS require() statements conflicting with ES module exports
+  - Converted all database imports to proper ES module syntax
+  - Application now starts successfully on port 5000
 ```
 
 ## User Preferences
