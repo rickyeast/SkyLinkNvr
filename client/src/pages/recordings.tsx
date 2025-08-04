@@ -40,16 +40,16 @@ export default function RecordingsPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab] = useState("library");
 
-  const { data: cameras } = useQuery({
+  const { data: cameras = [] } = useQuery({
     queryKey: ['/api/cameras']
   });
 
-  const { data: activeRecordings, refetch: refetchActiveRecordings } = useQuery({
+  const { data: activeRecordings = [], refetch: refetchActiveRecordings } = useQuery({
     queryKey: ['/api/recording/active'],
     refetchInterval: 5000 // Refresh every 5 seconds
   });
 
-  const selectedCamera = cameras?.find((camera: Camera) => camera.id === selectedCameraId);
+  const selectedCamera = cameras.find((camera: Camera) => camera.id === selectedCameraId);
 
   const handleStartRecording = async (cameraId: number) => {
     try {
@@ -70,11 +70,11 @@ export default function RecordingsPage() {
   };
 
   const isRecording = (cameraId: number) => {
-    return activeRecordings?.some((recording: ActiveRecording) => recording.cameraId === cameraId);
+    return activeRecordings.some((recording: ActiveRecording) => recording.cameraId === cameraId);
   };
 
   const getRecordingInfo = (cameraId: number) => {
-    return activeRecordings?.find((recording: ActiveRecording) => recording.cameraId === cameraId);
+    return activeRecordings.find((recording: ActiveRecording) => recording.cameraId === cameraId);
   };
 
   const getTriggerTypeColor = (triggerType: string) => {
@@ -107,7 +107,7 @@ export default function RecordingsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Cameras</SelectItem>
-              {cameras?.map((camera: Camera) => (
+              {cameras.map((camera: Camera) => (
                 <SelectItem key={camera.id} value={camera.id.toString()}>
                   {camera.name}
                 </SelectItem>
@@ -118,7 +118,7 @@ export default function RecordingsPage() {
       </div>
 
       {/* Active Recordings Status */}
-      {activeRecordings && activeRecordings.length > 0 && (
+      {activeRecordings.length > 0 && (
         <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
@@ -132,7 +132,7 @@ export default function RecordingsPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {activeRecordings.map((recording: ActiveRecording) => {
-                const camera = cameras?.find((c: Camera) => c.id === recording.cameraId);
+                const camera = cameras.find((c: Camera) => c.id === recording.cameraId);
                 return (
                   <div key={recording.cameraId} className="flex items-center justify-between p-3 rounded-lg border bg-background">
                     <div className="space-y-1">
@@ -218,7 +218,7 @@ export default function RecordingsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cameras?.map((camera: Camera) => {
+                {cameras.map((camera: Camera) => {
                   const recording = isRecording(camera.id);
                   const recordingInfo = getRecordingInfo(camera.id);
                   
@@ -241,7 +241,7 @@ export default function RecordingsPage() {
                               <span className="text-sm font-medium">Recording</span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge className={getTriggerTypeColor(recordingInfo.triggerType)} size="sm">
+                              <Badge className={getTriggerTypeColor(recordingInfo.triggerType)}>
                                 {recordingInfo.triggerType}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
@@ -285,7 +285,7 @@ export default function RecordingsPage() {
                 })}
               </div>
 
-              {(!cameras || cameras.length === 0) && (
+              {cameras.length === 0 && (
                 <div className="text-center py-8">
                   <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Cameras Found</h3>
