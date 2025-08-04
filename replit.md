@@ -198,6 +198,12 @@ Changelog:
   - Improved camera connection testing with better error handling and logging
   - Enhanced connection test to work with offline cameras and generate capabilities
   - Added comprehensive HTTP port testing (80, 8080, 554, 8000) for camera detection
+- August 04, 2025. Fixed recordings page black screen and TypeScript errors
+  - Resolved all TypeScript compilation errors causing page crashes
+  - Added proper default values for API queries (empty arrays vs undefined)
+  - Fixed Badge component property errors and data type checking
+  - Page now displays proper empty states when no cameras are configured
+  - Confirmed Docker host network mode ready for real camera discovery
 ```
 
 ## User Preferences
