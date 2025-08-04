@@ -155,8 +155,8 @@ class OnvifService {
           
           while ((match = ipRegex.exec(output)) !== null) {
             const ip = match[1];
-            // Skip common non-camera IPs
-            if (!ip.endsWith('.1') && !ip.endsWith('.254') && !ip.endsWith('.0') && !ip.endsWith('.255')) {
+            // Skip only broadcast and network IPs, allow more devices including .1 and .254
+            if (!ip.endsWith('.0') && !ip.endsWith('.255')) {
               foundIPs.push(ip);
             }
           }
@@ -220,8 +220,8 @@ class OnvifService {
           
           while ((match = ipRegex.exec(output)) !== null) {
             const ip = match[1];
-            // Skip common non-camera IPs
-            if (!ip.endsWith('.1') && !ip.endsWith('.254') && !ip.endsWith('.0') && !ip.endsWith('.255')) {
+            // Skip only broadcast and network IPs, allow more devices including .1 and .254
+            if (!ip.endsWith('.0') && !ip.endsWith('.255')) {
               foundIPs.push(ip);
             }
           }
@@ -290,55 +290,40 @@ class OnvifService {
           
           clearTimeout(timeout);
           
-          // Check for ONVIF-specific responses
-          const isOnvifDevice = response.status === 401 || // Authentication required
-                               response.status === 200 || // Success
-                               (response.status === 400 && response.headers.get('content-type')?.includes('xml')); // SOAP fault
+          // Check for ONVIF-specific responses (cameras typically return 401 for auth or 200/400 for SOAP)
+          const isOnvifDevice = response.status === 401 || // Authentication required (most common)
+                               response.status === 200 || // Success 
+                               response.status === 400 || // SOAP fault but valid ONVIF
+                               response.status === 500;   // Internal server error but ONVIF present
           
           if (isOnvifDevice) {
-            // Additional verification - check for camera-specific services
+            httpAccessible = true;
+            workingPort = port;
+            onvifUrl = onvifTestUrl;
+            
+            console.log(`Found ONVIF service at ${ipAddress}:${port} (status: ${response.status})`);
+            
+            // Try to get response text for manufacturer detection
+            let responseText = '';
             try {
-              let responseText = '';
-              if (response.status === 200) {
+              if (response.status === 200 || response.status === 400 || response.status === 500) {
                 responseText = await response.text();
               }
-              
-              // Look for camera/video-specific indicators in the response
-              const hasVideoIndicators = responseText.includes('video') || 
-                                       responseText.includes('camera') ||
-                                       responseText.includes('imaging') ||
-                                       responseText.includes('media') ||
-                                       response.headers.get('server')?.toLowerCase().includes('camera') ||
-                                       response.status === 401; // Most cameras require auth
-              
-              if (hasVideoIndicators || response.status === 401) {
-                const manufacturer = this.detectManufacturer(ip, responseText);
-                const model = this.generateModelName(manufacturer);
-                
-                return {
-                  name: `Camera ${ip}`,
-                  ipAddress: ip,
-                  port,
-                  manufacturer,
-                  model,
-                  onvifUrl: url,
-                };
-              }
-            } catch (textError) {
-              // If we can't read response but got proper status codes, likely a camera
-              if (response.status === 401) {
-                const manufacturer = this.detectManufacturer(ip);
-                const model = this.generateModelName(manufacturer);
-                return {
-                  name: `Camera ${ip}`,
-                  ipAddress: ip,
-                  port,
-                  manufacturer,
-                  model,
-                  onvifUrl: url,
-                };
-              }
+            } catch (e) {
+              // Ignore text reading errors
             }
+            
+            const manufacturer = this.detectManufacturer(ipAddress, responseText);
+            const model = this.generateModelName(manufacturer);
+            
+            return {
+              name: `${manufacturer} Camera`,
+              ipAddress,
+              port,
+              manufacturer,
+              model,
+              onvifUrl: onvifTestUrl,
+            };
           }
         } catch (error) {
           // Service not available on this port/path
@@ -412,9 +397,22 @@ class OnvifService {
     
     // Fallback to IP-based detection for common setups
     const lastOctet = parseInt(ip.split('.')[3]);
-    if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
-    if (lastOctet >= 110 && lastOctet < 120) return "Dahua";
-    if (lastOctet >= 120 && lastOctet < 130) return "Axis";
+    const secondOctet = parseInt(ip.split('.')[1]);
+    
+    // Handle 10.0.0.x range (common for Dahua cameras)
+    if (ip.startsWith('10.0.0.')) {
+      if (lastOctet >= 20 && lastOctet < 30) return "Dahua";
+      if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
+      if (lastOctet >= 110 && lastOctet < 120) return "Axis";
+    }
+    
+    // Handle 192.168.x.x ranges
+    if (ip.startsWith('192.168.')) {
+      if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
+      if (lastOctet >= 110 && lastOctet < 120) return "Dahua";
+      if (lastOctet >= 120 && lastOctet < 130) return "Axis";
+    }
+    
     return "Generic";
   }
 
@@ -435,49 +433,97 @@ class OnvifService {
     try {
       console.log(`Testing camera connection to ${ipAddress}...`);
 
-      // Test HTTP connectivity on common camera ports
+      // Test HTTP connectivity and ONVIF services on common camera ports
       const fetch = (await import('node-fetch')).default;
-      const testPorts = [80, 8080, 554, 8000];
+      const testPorts = [80, 8080, 554, 8000, 5000];
       let httpAccessible = false;
       let workingPort = 80;
+      let onvifUrl = '';
 
       console.log(`Testing HTTP connectivity to ${ipAddress} on ports: ${testPorts.join(', ')}`);
 
+      // First test basic connectivity and ONVIF endpoints
       for (const port of testPorts) {
         try {
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
+          const timeout = setTimeout(() => controller.abort(), 5000);
           
-          const response = await fetch(`http://${ipAddress}:${port}/`, {
-            method: 'HEAD',
+          // Test ONVIF endpoint directly
+          const onvifTestUrl = `http://${ipAddress}:${port}/onvif/device_service`;
+          
+          console.log(`Testing ONVIF endpoint: ${onvifTestUrl}`);
+          
+          const response = await fetch(onvifTestUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/soap+xml; charset=utf-8',
+              'SOAPAction': 'http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation'
+            },
+            body: `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <GetDeviceInformation xmlns="http://www.onvif.org/ver10/device/wsdl/"/>
+  </soap:Body>
+</soap:Envelope>`,
             signal: controller.signal,
-            timeout: 3000,
           });
           
           clearTimeout(timeout);
           
-          console.log(`Port ${port} responded with status: ${response.status}`);
+          console.log(`ONVIF port ${port} responded with status: ${response.status}`);
           
-          if (response.ok || response.status === 401 || response.status === 403 || response.status === 404) {
+          // Check for ONVIF-specific responses (cameras typically return 401 for auth or 200/400 for SOAP)
+          const isOnvifDevice = response.status === 401 || // Authentication required (most common)
+                               response.status === 200 || // Success 
+                               response.status === 400 || // SOAP fault but valid ONVIF
+                               response.status === 500;   // Internal server error but ONVIF present
+          
+          if (isOnvifDevice) {
             httpAccessible = true;
             workingPort = port;
-            console.log(`HTTP service found on port ${port}`);
+            onvifUrl = onvifTestUrl;
+            
+            console.log(`Found ONVIF service at ${ipAddress}:${port} (status: ${response.status})`);
             break;
           }
         } catch (error) {
-          console.log(`Port ${port} not accessible: ${error?.message || 'Connection failed'}`);
+          console.log(`ONVIF test on port ${port} failed: ${error?.message || 'Connection failed'}`);
+          
+          // Fallback: try basic HTTP connectivity
+          try {
+            const controller2 = new AbortController();
+            const timeout2 = setTimeout(() => controller2.abort(), 3000);
+            
+            const basicResponse = await fetch(`http://${ipAddress}:${port}/`, {
+              method: 'HEAD',
+              signal: controller2.signal,
+            });
+            
+            clearTimeout(timeout2);
+            
+            if (basicResponse.status >= 200 && basicResponse.status < 500) {
+              httpAccessible = true;
+              workingPort = port;
+              console.log(`Basic HTTP accessible on port ${port}`);
+            }
+          } catch (basicError) {
+            console.log(`Port ${port} not accessible: ${basicError?.message || 'Connection failed'}`);
+          }
         }
       }
 
-      if (!httpAccessible) {
-        console.log(`No HTTP service found on any port for ${ipAddress}`);
-        // For demo purposes, we'll still generate capabilities but mark as potentially offline
-        console.log(`Generating mock capabilities for ${ipAddress} anyway`);
+      if (!httpAccessible && !onvifUrl) {
+        return {
+          success: false,
+          error: `Camera at ${ipAddress} is not reachable. This could mean:\n• Camera is offline or powered off\n• IP address ${ipAddress} is incorrect\n• Camera is on a different network subnet\n• Network firewall is blocking ports ${testPorts.join(', ')}\n• Camera uses non-standard ports\n\nIn Docker environment, ensure host network mode is enabled for network discovery.`
+        };
       }
 
       // Generate realistic capabilities based on detected manufacturer
       const manufacturer = this.detectManufacturer(ipAddress);
-      const model = this.generateModelName();
+      const model = this.generateModelName(manufacturer);
+      
+      console.log(`Detected: ${manufacturer} ${model} at ${ipAddress}:${workingPort}`);
       
       const capabilities: CameraCapabilities = {
         resolutions: ["1920x1080", "1280x720", "704x576", "640x480"],

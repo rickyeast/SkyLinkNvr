@@ -216,6 +216,12 @@ Changelog:
   - Added clickable discovered devices that auto-fill camera configuration forms
   - Improved manufacturer detection with response parsing and enhanced model identification
   - Reduced discovery timeouts and added streaming status updates for better user experience
+- August 04, 2025. Fixed network discovery and connection testing issues
+  - Removed overly restrictive IP filtering that was excluding valid camera IPs (.1, .254)
+  - Enhanced ONVIF detection with proper SOAP requests and multiple status code checks
+  - Improved manufacturer detection for 10.0.0.x network ranges (common Dahua setup)
+  - Added comprehensive error messages for unreachable cameras with troubleshooting steps
+  - Fixed connection test to provide detailed feedback about network accessibility issues
 ```
 
 ## User Preferences
