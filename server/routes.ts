@@ -279,39 +279,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hostSysPath = process.env.HOST_SYS || '/sys';
       
       try {
+        console.log(`Attempting to read host system stats from: ${hostProcPath}`);
+        
         // Try to get memory info from host proc
-        if (await fs.access(`${hostProcPath}/meminfo`).then(() => true).catch(() => false)) {
-          const meminfo = await fs.readFile(`${hostProcPath}/meminfo`, 'utf8');
+        const meminfoPath = `${hostProcPath}/meminfo`;
+        try {
+          await fs.access(meminfoPath);
+          const meminfo = await fs.readFile(meminfoPath, 'utf8');
           const totalMatch = meminfo.match(/MemTotal:\s+(\d+)\s+kB/);
-          const availableMatch = meminfo.match(/MemAvailable:\s+(\d+)\s+kB/);
+          const availableMatch = meminfo.match(/MemAvailable:\s+(\d+)\s+kB/) || meminfo.match(/MemFree:\s+(\d+)\s+kB/);
           
           if (totalMatch && availableMatch) {
             const totalMem = parseInt(totalMatch[1]) * 1024; // Convert to bytes
             const availableMem = parseInt(availableMatch[1]) * 1024;
             const usedMem = totalMem - availableMem;
             memoryUsage = ((usedMem / totalMem) * 100).toFixed(1);
+            console.log(`Host memory usage: ${memoryUsage}% (${Math.round(usedMem / 1024 / 1024 / 1024 * 10) / 10}GB used of ${Math.round(totalMem / 1024 / 1024 / 1024 * 10) / 10}GB total)`);
+          } else {
+            console.log('Could not parse host memory info, using fallback');
+            throw new Error('Memory parsing failed');
           }
-        } else {
+        } catch (memError) {
+          console.log(`Host memory stats not available (${meminfoPath}), using container stats:`, memError.message);
           // Fall back to os module
           const totalMem = os.totalmem();
           const freeMem = os.freemem();
           memoryUsage = (((totalMem - freeMem) / totalMem) * 100).toFixed(1);
+          console.log(`Container memory usage: ${memoryUsage}%`);
         }
         
         // Try to get CPU usage from host proc
-        if (await fs.access(`${hostProcPath}/stat`).then(() => true).catch(() => false)) {
-          const stat = await fs.readFile(`${hostProcPath}/stat`, 'utf8');
+        const statPath = `${hostProcPath}/stat`;
+        try {
+          await fs.access(statPath);
+          const stat = await fs.readFile(statPath, 'utf8');
           const cpuLine = stat.split('\n')[0];
           const cpuTimes = cpuLine.split(/\s+/).slice(1).map(Number);
           
-          const totalTime = cpuTimes.reduce((sum, time) => sum + time, 0);
-          const idleTime = cpuTimes[3]; // idle time is 4th field
-          
-          if (totalTime > 0) {
-            cpuUsage = (((totalTime - idleTime) / totalTime) * 100).toFixed(1);
+          if (cpuTimes.length >= 8) {
+            const totalTime = cpuTimes.reduce((sum, time) => sum + time, 0);
+            const idleTime = cpuTimes[3] + cpuTimes[4]; // idle + iowait
+            
+            if (totalTime > 0) {
+              cpuUsage = (((totalTime - idleTime) / totalTime) * 100).toFixed(1);
+              console.log(`Host CPU usage: ${cpuUsage}%`);
+            }
+          } else {
+            throw new Error('Invalid CPU stats format');
           }
-        } else {
-          // Fall back to os module calculation
+        } catch (cpuError) {
+          console.log(`Host CPU stats not available (${statPath}), using container stats:`, cpuError.message);
+          // Fall back to simple load average or basic calculation
+          try {
+            const loadavgPath = `${hostProcPath}/loadavg`;
+            await fs.access(loadavgPath);
+            const loadavg = await fs.readFile(loadavgPath, 'utf8');
+            const load1min = parseFloat(loadavg.split(' ')[0]);
+            // Estimate CPU usage from load average (rough approximation)
+            cpuUsage = Math.min(load1min * 25, 100).toFixed(1);
+            console.log(`Host CPU estimated from load average: ${cpuUsage}% (load: ${load1min})`);
+          } catch (loadError) {
+            // Final fallback to os module calculation
+            const cpus = os.cpus();
+            let totalIdle = 0;
+            let totalTick = 0;
+            
+            cpus.forEach(cpu => {
+              for (const type in cpu.times) {
+                totalTick += cpu.times[type as keyof typeof cpu.times];
+              }
+              totalIdle += cpu.times.idle;
+            });
+            
+            if (totalTick > 0) {
+              cpuUsage = ((1 - totalIdle / totalTick) * 100).toFixed(1);
+              console.log(`Container CPU usage: ${cpuUsage}%`);
+            }
+          }
+        }
+        
+        // Try to get storage usage using df command or disk stats
+        try {
+          const { spawn } = await import('child_process');
+          const dfOutput = await new Promise<string>((resolve, reject) => {
+            const dfProcess = spawn('df', ['-h', '/']);
+            let output = '';
+            
+            dfProcess.stdout.on('data', (data) => {
+              output += data.toString();
+            });
+            
+            dfProcess.on('close', (code) => {
+              if (code === 0) {
+                resolve(output);
+              } else {
+                reject(new Error(`df command failed with code ${code}`));
+              }
+            });
+            
+            dfProcess.on('error', reject);
+          });
+          
+          // Parse df output to get usage percentage
+          const lines = dfOutput.trim().split('\n');
+          if (lines.length >= 2) {
+            const rootLine = lines[1];
+            const match = rootLine.match(/(\d+)%/);
+            if (match) {
+              storageUsage = match[1];
+              console.log(`Host storage usage: ${storageUsage}%`);
+            }
+          }
+        } catch (storageError) {
+          console.log('Could not get host storage stats, using default:', storageError.message);
+          storageUsage = "15"; // fallback
+        }
+        
+        // Try to get uptime from host
+        const uptimePath = `${hostProcPath}/uptime`;
+        try {
+          await fs.access(uptimePath);
+          const uptimeData = await fs.readFile(uptimePath, 'utf8');
+          const uptimeSeconds = parseFloat(uptimeData.split(' ')[0]);
+          uptime = Math.floor(uptimeSeconds / 3600);
+          console.log(`Host uptime: ${uptime} hours`);
+        } catch (uptimeError) {
+          console.log(`Host uptime not available (${uptimePath}), using container uptime:`, uptimeError.message);
+          uptime = Math.floor(os.uptime() / 3600);
+        }
+        
+      } catch (error) {
+        console.error("Failed to read system stats:", error.message);
+        // Ensure we have some values even if everything fails
+        if (cpuUsage === "0") {
           const cpus = os.cpus();
           let totalIdle = 0;
           let totalTick = 0;
@@ -328,25 +428,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Try to get storage usage
-        try {
-          const stats = await fs.stat('/app/recordings');
-          // This is a simplified storage calculation
-          // In a real scenario, you'd want to check actual filesystem usage
-          storageUsage = "15"; // placeholder
-        } catch (error) {
-          // Keep default value
+        if (memoryUsage === "0") {
+          const totalMem = os.totalmem();
+          const freeMem = os.freemem();
+          memoryUsage = (((totalMem - freeMem) / totalMem) * 100).toFixed(1);
         }
-        
-        // Try to get uptime from host
-        if (await fs.access(`${hostProcPath}/uptime`).then(() => true).catch(() => false)) {
-          const uptimeData = await fs.readFile(`${hostProcPath}/uptime`, 'utf8');
-          const uptimeSeconds = parseFloat(uptimeData.split(' ')[0]);
-          uptime = Math.floor(uptimeSeconds / 3600);
-        }
-        
-      } catch (error) {
-        console.warn("Failed to read host system stats, using container stats:", error.message);
         // Use fallback values calculated above
       }
       

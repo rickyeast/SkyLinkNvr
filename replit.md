@@ -204,6 +204,12 @@ Changelog:
   - Fixed Badge component property errors and data type checking
   - Page now displays proper empty states when no cameras are configured
   - Confirmed Docker host network mode ready for real camera discovery
+- August 04, 2025. Enhanced system monitoring and network discovery for Docker deployment
+  - Implemented real nmap-based network scanning for Docker host network mode
+  - Enhanced host system monitoring with detailed logging and fallback mechanisms
+  - Added proper host /proc and /sys filesystem access for CPU, memory, and uptime stats
+  - Improved storage monitoring using df command for accurate disk usage
+  - Added comprehensive error handling and debug logging for Docker environments
 ```
 
 ## User Preferences
