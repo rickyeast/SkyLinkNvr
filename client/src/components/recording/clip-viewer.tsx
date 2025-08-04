@@ -62,7 +62,7 @@ export function ClipViewer({ cameraId }: ClipViewerProps) {
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: recordings, isLoading } = useQuery({
+  const { data: recordings = [], isLoading } = useQuery({
     queryKey: ['/api/recordings', cameraId, filterTriggerType],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -72,7 +72,7 @@ export function ClipViewer({ cameraId }: ClipViewerProps) {
     }
   });
 
-  const { data: motionEvents } = useQuery({
+  const { data: motionEvents = [] } = useQuery({
     queryKey: ['/api/recording/motion-events', selectedRecording?.id],
     enabled: !!selectedRecording
   });
@@ -105,7 +105,7 @@ export function ClipViewer({ cameraId }: ClipViewerProps) {
     }
   };
 
-  const filteredRecordings = recordings?.filter((recording: Recording) => {
+  const filteredRecordings = recordings.filter((recording: Recording) => {
     if (searchTerm && !recording.filename.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
@@ -337,7 +337,7 @@ export function ClipViewer({ cameraId }: ClipViewerProps) {
               </div>
             </div>
 
-            {motionEvents && motionEvents.length > 0 && (
+            {motionEvents.length > 0 && (
               <>
                 <Separator />
                 <div>

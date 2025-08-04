@@ -24,31 +24,146 @@ export interface CameraConnectionTest {
 
 class OnvifService {
   async discoverDevices(): Promise<OnvifDevice[]> {
-    console.log('Starting device discovery...');
+    console.log('Starting real network device discovery...');
     
-    // For demo purposes, return some mock discovered devices
-    // In production, this would scan the network for actual cameras
-    const devices: OnvifDevice[] = [
-      {
-        name: "IP Camera 192.168.1.100",
-        ipAddress: "192.168.1.100",
-        port: 80,
-        manufacturer: "Hikvision",
-        model: "DS-2CD2142FWD-I",
-        onvifUrl: "http://192.168.1.100/onvif/device_service"
-      },
-      {
-        name: "IP Camera 192.168.1.101",
-        ipAddress: "192.168.1.101", 
-        port: 8080,
-        manufacturer: "Dahua",
-        model: "IPC-HDBW4631R-ZS",
-        onvifUrl: "http://192.168.1.101:8080/onvif/device_service"
+    try {
+      // Get network interfaces and scan for devices
+      const networkRanges = await this.getNetworkRanges();
+      const discoveredDevices: OnvifDevice[] = [];
+      
+      for (const range of networkRanges) {
+        console.log(`Scanning network range: ${range}`);
+        const devices = await this.scanNetworkRange(range);
+        discoveredDevices.push(...devices);
       }
-    ];
-    
-    console.log(`Discovery completed, found ${devices.length} cameras`);
-    return devices;
+      
+      console.log(`Discovery completed, found ${discoveredDevices.length} cameras`);
+      console.log('Discovered devices:', discoveredDevices.map(d => `${d.name} (${d.ipAddress}:${d.port})`));
+      
+      return discoveredDevices;
+    } catch (error) {
+      console.error('Network discovery failed:', error);
+      console.log('Network discovery will work in Docker environment with nmap installed');
+      
+      // In development/Replit environment, return empty array since no real cameras to discover
+      return [];
+    }
+  }
+
+  private async getNetworkRanges(): Promise<string[]> {
+    try {
+      const { spawn } = await import('child_process');
+      const { promisify } = await import('util');
+      const exec = promisify(spawn);
+      
+      // Get network interfaces and extract ranges
+      return new Promise((resolve, reject) => {
+        const process = spawn('ip', ['route', 'show']);
+        let output = '';
+        
+        process.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        process.on('close', (code) => {
+          if (code !== 0) {
+            // Fallback to common ranges if ip command fails
+            resolve(['192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24']);
+            return;
+          }
+          
+          const ranges: string[] = [];
+          const lines = output.split('\n');
+          
+          for (const line of lines) {
+            // Look for local network routes
+            const match = line.match(/^(192\.168\.\d+\.0\/24|10\.0\.\d+\.0\/24|172\.\d+\.\d+\.0\/24)/);
+            if (match && !ranges.includes(match[1])) {
+              ranges.push(match[1]);
+            }
+          }
+          
+          // Add common ranges if none found
+          if (ranges.length === 0) {
+            ranges.push('192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24');
+          }
+          
+          resolve(ranges);
+        });
+        
+        process.on('error', () => {
+          resolve(['192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24']);
+        });
+      });
+    } catch (error) {
+      return ['192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24'];
+    }
+  }
+
+  private async scanNetworkRange(range: string): Promise<OnvifDevice[]> {
+    try {
+      const { spawn } = await import('child_process');
+      
+      // Use nmap to scan for devices with common camera ports
+      return new Promise((resolve, reject) => {
+        const devices: OnvifDevice[] = [];
+        const nmapArgs = [
+          '-sn', // Ping scan only
+          range
+        ];
+        
+        console.log(`Running nmap scan: nmap ${nmapArgs.join(' ')}`);
+        const nmapProcess = spawn('nmap', nmapArgs);
+        let output = '';
+        
+        nmapProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        nmapProcess.on('close', async (code) => {
+          if (code !== 0) {
+            console.error('Nmap scan failed, trying alternative discovery');
+            resolve([]);
+            return;
+          }
+          
+          // Extract IP addresses from nmap output
+          const ipRegex = /Nmap scan report for (?:.*? \()?(\d+\.\d+\.\d+\.\d+)/g;
+          const foundIPs: string[] = [];
+          let match;
+          
+          while ((match = ipRegex.exec(output)) !== null) {
+            const ip = match[1];
+            // Skip common non-camera IPs
+            if (!ip.endsWith('.1') && !ip.endsWith('.254') && !ip.endsWith('.0') && !ip.endsWith('.255')) {
+              foundIPs.push(ip);
+            }
+          }
+          
+          console.log(`Found ${foundIPs.length} active IPs in range ${range}:`, foundIPs);
+          
+          // Test each IP for ONVIF services
+          const testPromises = foundIPs.map(ip => this.testOnvifService(ip));
+          const results = await Promise.allSettled(testPromises);
+          
+          for (const result of results) {
+            if (result.status === 'fulfilled' && result.value) {
+              devices.push(result.value);
+            }
+          }
+          
+          resolve(devices);
+        });
+        
+        nmapProcess.on('error', (error) => {
+          console.error('Nmap process error:', error);
+          resolve([]);
+        });
+      });
+    } catch (error) {
+      console.error('Network range scan failed:', error);
+      return [];
+    }
   }
 
   private async testOnvifService(ip: string): Promise<OnvifDevice | null> {
