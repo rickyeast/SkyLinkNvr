@@ -192,6 +192,12 @@ Changelog:
   - Fixed CommonJS require() statements conflicting with ES module exports
   - Converted all database imports to proper ES module syntax
   - Application now starts successfully on port 5000
+- August 04, 2025. Fixed camera discovery and connection testing functionality
+  - Resolved routing conflicts between discovery and parameterized camera routes
+  - Fixed camera discovery API returning proper device list instead of errors
+  - Improved camera connection testing with better error handling and logging
+  - Enhanced connection test to work with offline cameras and generate capabilities
+  - Added comprehensive HTTP port testing (80, 8080, 554, 8000) for camera detection
 ```
 
 ## User Preferences

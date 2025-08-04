@@ -143,14 +143,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRecording(recording: InsertRecording): Promise<Recording> {
-    const [newRecording] = await db.insert(recordings).values(recording).returning();
+    const [newRecording] = await db.insert(recordings).values(recording as any).returning();
     return newRecording;
   }
 
   async updateRecording(id: number, recording: Partial<InsertRecording>): Promise<Recording | undefined> {
     const [updated] = await db
       .update(recordings)
-      .set(recording)
+      .set(recording as any)
       .where(eq(recordings.id, id))
       .returning();
     return updated || undefined;
@@ -264,13 +264,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRecordingSettings(settings: InsertRecordingSetting): Promise<RecordingSetting> {
-    const [newSettings] = await db.insert(recordingSettings).values(settings).returning();
+    const [newSettings] = await db.insert(recordingSettings).values(settings as any).returning();
     return newSettings;
   }
 
   async updateRecordingSettings(cameraId: number, settings: Partial<InsertRecordingSetting>): Promise<RecordingSetting | undefined> {
     const [updated] = await db.update(recordingSettings)
-      .set({ ...settings, updatedAt: new Date() })
+      .set({ ...settings, updatedAt: new Date() } as any)
       .where(eq(recordingSettings.cameraId, cameraId))
       .returning();
     return updated || undefined;

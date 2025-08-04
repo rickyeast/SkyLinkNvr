@@ -8,6 +8,22 @@ import { aiDetectionService } from "./services/ai-detection";
 import { recordingService } from "./services/recording";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Camera discovery (must be before parameterized routes)
+  const handleCameraDiscovery = async (req: any, res: any) => {
+    try {
+      console.log("Starting camera discovery...");
+      const devices = await onvifService.discoverDevices();
+      console.log(`Found ${devices.length} potential cameras`);
+      res.json(devices);
+    } catch (error) {
+      console.error("Camera discovery error:", error);
+      res.status(500).json({ error: "Failed to discover cameras", details: error?.message || String(error) });
+    }
+  };
+
+  app.get("/api/cameras/discover", handleCameraDiscovery);
+  app.post("/api/cameras/discover", handleCameraDiscovery);
+
   // Camera routes
   app.get("/api/cameras", async (req, res) => {
     try {
@@ -77,21 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Camera discovery (support both GET and POST for compatibility)
-  const handleCameraDiscovery = async (req: any, res: any) => {
-    try {
-      console.log("Starting camera discovery...");
-      const devices = await onvifService.discoverDevices();
-      console.log(`Found ${devices.length} potential cameras`);
-      res.json(devices);
-    } catch (error) {
-      console.error("Camera discovery error:", error);
-      res.status(500).json({ error: "Failed to discover cameras" });
-    }
-  };
 
-  app.get("/api/cameras/discover", handleCameraDiscovery);
-  app.post("/api/cameras/discover", handleCameraDiscovery);
 
   // Camera connection test and capability detection
   app.post("/api/cameras/test", async (req, res) => {
