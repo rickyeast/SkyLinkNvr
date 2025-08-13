@@ -5,7 +5,9 @@ services:
     build: 
       context: .
       target: production
-    network_mode: host
+    ports:
+      - "8080:8080"
+      - "5000:5000"
     privileged: true
     volumes:
       - /proc:/host/proc:ro
@@ -16,14 +18,18 @@ services:
       - ./logs:/app/logs
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://skylink:${POSTGRES_PASSWORD:-skylink_secure_pass}@postgres:5432/skylink_nvr
       - HOST_PROC=/host/proc
       - HOST_SYS=/host/sys
       - PORT=8080
     restart: unless-stopped
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - skylink-network
 
   postgres:
     image: postgres:15-alpine
@@ -38,6 +44,11 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skylink -d skylink_nvr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - skylink-network
 

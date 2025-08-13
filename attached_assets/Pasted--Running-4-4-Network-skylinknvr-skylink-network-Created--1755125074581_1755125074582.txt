@@ -1,0 +1,138 @@
+[+] Running 4/4
+ ✔ Network skylinknvr_skylink-network  Created                                                                                                                                                                                  0.1s
+ ✔ Container skylinknvr-postgres-1     Started                                                                                                                                                                                  0.8s
+ ✔ Container skylinknvr-redis-1        Started                                                                                                                                                                                  0.7s
+ ✔ Container skylinknvr-skylink-nvr-1  Started                                                                                                                                                                                  1.0s
+[SUCCESS] Services started
+[INFO] Waiting for database to initialize...
+[INFO] Pushing database schema...
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[✓] Pulling schema from database...
+[✓] Changes applied
+[SUCCESS] Database schema pushed successfully
+[INFO] Waiting for services to initialize...
+[INFO] Checking service health...
+[WARNING] Waiting for services to start... (1/30)
+[WARNING] Waiting for services to start... (2/30)
+[WARNING] Waiting for services to start... (3/30)
+[WARNING] Waiting for services to start... (4/30)
+[WARNING] Waiting for services to start... (5/30)
+[WARNING] Waiting for services to start... (6/30)
+[WARNING] Waiting for services to start... (7/30)
+[WARNING] Waiting for services to start... (8/30)
+[WARNING] Waiting for services to start... (9/30)
+[WARNING] Waiting for services to start... (10/30)
+[WARNING] Waiting for services to start... (11/30)
+[WARNING] Waiting for services to start... (12/30)
+[WARNING] Waiting for services to start... (13/30)
+[WARNING] Waiting for services to start... (14/30)
+[WARNING] Waiting for services to start... (15/30)
+[WARNING] Waiting for services to start... (16/30)
+[WARNING] Waiting for services to start... (17/30)
+[WARNING] Waiting for services to start... (18/30)
+[WARNING] Waiting for services to start... (19/30)
+[WARNING] Waiting for services to start... (20/30)
+[WARNING] Waiting for services to start... (21/30)
+[WARNING] Waiting for services to start... (22/30)
+[WARNING] Waiting for services to start... (23/30)
+[WARNING] Waiting for services to start... (24/30)
+[WARNING] Waiting for services to start... (25/30)
+[WARNING] Waiting for services to start... (26/30)
+[WARNING] Waiting for services to start... (27/30)
+[WARNING] Waiting for services to start... (28/30)
+[WARNING] Waiting for services to start... (29/30)
+[WARNING] Waiting for services to start... (30/30)
+[ERROR] Health check failed after 150 seconds
+[INFO] Showing container status and logs for troubleshooting...
+
+Container Status:
+NAME                       IMAGE                    COMMAND                  SERVICE       CREATED         STATUS                   PORTS
+skylinknvr-postgres-1      postgres:15-alpine       "docker-entrypoint.s…"   postgres      2 minutes ago   Up 2 minutes             0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+skylinknvr-redis-1         redis:7-alpine           "docker-entrypoint.s…"   redis         2 minutes ago   Up 2 minutes             0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+skylinknvr-skylink-nvr-1   skylinknvr-skylink-nvr   "dumb-init -- node d…"   skylink-nvr   2 minutes ago   Up 2 minutes (healthy)
+
+Recent Logs:
+postgres-1  |
+postgres-1  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres-1  |
+postgres-1  | 2025-08-13 22:40:49.628 UTC [1] LOG:  starting PostgreSQL 15.13 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+postgres-1  | 2025-08-13 22:40:49.628 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+redis-1     | 1:C 13 Aug 2025 22:40:49.438 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+postgres-1     | 2025-08-13 22:40:49.628 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+redis-1        | 1:C 13 Aug 2025 22:40:49.438 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis-1        | 1:C 13 Aug 2025 22:40:49.438 * Redis version=7.4.5, bits=64, commit=00000000, modified=0, pid=1, just started
+skylink-nvr-1  |     at async file:///app/dist/index.js:1461:7 {
+skylink-nvr-1  |   length: 112,
+redis-1        | 1:C 13 Aug 2025 22:40:49.438 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis-1        | 1:M 13 Aug 2025 22:40:49.439 * monotonic clock: POSIX clock_gettime
+redis-1        | 1:M 13 Aug 2025 22:40:49.441 * Running mode=standalone, port=6379.
+redis-1        | 1:M 13 Aug 2025 22:40:49.442 * Server initialized
+skylink-nvr-1  |   severity: 'ERROR',
+skylink-nvr-1  |   code: '42P01',
+redis-1        | 1:M 13 Aug 2025 22:40:49.442 * Ready to accept connections tcp
+skylink-nvr-1  |   detail: undefined,
+skylink-nvr-1  |   hint: undefined,
+skylink-nvr-1  |   position: '13',
+skylink-nvr-1  |   internalPosition: undefined,
+skylink-nvr-1  |   internalQuery: undefined,
+skylink-nvr-1  |   where: undefined,
+skylink-nvr-1  |   schema: undefined,
+skylink-nvr-1  |   table: undefined,
+skylink-nvr-1  |   column: undefined,
+postgres-1     | 2025-08-13 22:40:49.639 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1     | 2025-08-13 22:40:49.654 UTC [29] LOG:  database system was interrupted; last known up at 2025-08-13 22:28:38 UTC
+postgres-1     | 2025-08-13 22:40:50.005 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+skylink-nvr-1  |   dataType: undefined,
+skylink-nvr-1  |   constraint: undefined,
+skylink-nvr-1  |   file: 'parse_relation.c',
+skylink-nvr-1  |   line: '1392',
+postgres-1     | 2025-08-13 22:40:50.011 UTC [29] LOG:  redo starts at 0/196C760
+postgres-1     | 2025-08-13 22:40:50.011 UTC [29] LOG:  invalid record length at 0/196C798: wanted 24, got 0
+postgres-1     | 2025-08-13 22:40:50.011 UTC [29] LOG:  redo done at 0/196C760 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+postgres-1     | 2025-08-13 22:40:50.020 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+postgres-1     | 2025-08-13 22:40:50.041 UTC [27] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.007 s, sync=0.003 s, total=0.025 s; sync files=2, longest=0.002 s, average=0.002 s; distance=0 kB, estimate=0 kB
+postgres-1     | 2025-08-13 22:40:50.052 UTC [1] LOG:  database system is ready to accept connections
+postgres-1     | 2025-08-13 22:40:54.242 UTC [33] ERROR:  relation "cameras" does not exist at character 276
+skylink-nvr-1  |   routine: 'parserOpenTable'
+skylink-nvr-1  | }
+skylink-nvr-1  | 10:40:55 PM [express] GET /api/system/health 500 in 98ms :: {"error":"Failed to fetch system health"}
+skylink-nvr-1  | Attempting to read host system stats from: /host/proc
+skylink-nvr-1  | Host memory usage: 15.7% (1.2GB used of 7.6GB total)
+skylink-nvr-1  | Host CPU usage: 0.5%
+postgres-1     | 2025-08-13 22:40:54.242 UTC [33] STATEMENT:  select "id", "name", "ip_address", "port", "username", "password", "rtsp_url", "onvif_url", "manufacturer", "model", "resolution", "fps", "codec", "status", "is_recording", "ai_detection_enabled", "ai_detection_types", "confidence_threshold", "created_at", "updated_at" from "cameras" order by "cameras"."name"
+postgres-1     | 2025-08-13 22:40:55.019 UTC [34] ERROR:  relation "system_health" does not exist at character 13
+skylink-nvr-1  | Host storage usage: 21%
+skylink-nvr-1  | Host uptime: 17 hours
+postgres-1     | 2025-08-13 22:40:55.019 UTC [34] STATEMENT:  insert into "system_health" ("id", "cpu_usage", "memory_usage", "storage_usage", "network_in", "network_out", "timestamp") values (default, $1, $2, $3, $4, $5, default) returning "id", "cpu_usage", "memory_usage", "storage_usage", "network_in", "network_out", "timestamp"
+skylink-nvr-1  | 10:41:25 PM [express] GET /api/system/health 200 in 83ms :: {"id":1,"cpuUsage":"0.5","memoryUsage":"1…
+skylink-nvr-1  | Attempting to read host system stats from: /host/proc
+skylink-nvr-1  | Host memory usage: 15.2% (1.2GB used of 7.6GB total)
+skylink-nvr-1  | Host CPU usage: 0.5%
+skylink-nvr-1  | Host storage usage: 21%
+skylink-nvr-1  | Host uptime: 17 hours
+skylink-nvr-1  | 10:41:55 PM [express] GET /api/system/health 200 in 113ms :: {"id":1,"cpuUsage":"0.5","memoryUsage":"…
+skylink-nvr-1  | Attempting to read host system stats from: /host/proc
+skylink-nvr-1  | Host memory usage: 15.0% (1.1GB used of 7.6GB total)
+skylink-nvr-1  | Host CPU usage: 0.5%
+skylink-nvr-1  | Host storage usage: 21%
+skylink-nvr-1  | Host uptime: 17 hours
+skylink-nvr-1  | 10:42:25 PM [express] GET /api/system/health 200 in 67ms :: {"id":1,"cpuUsage":"0.5","memoryUsage":"1…
+skylink-nvr-1  | Attempting to read host system stats from: /host/proc
+skylink-nvr-1  | Host memory usage: 14.6% (1.1GB used of 7.6GB total)
+skylink-nvr-1  | Host CPU usage: 0.5%
+skylink-nvr-1  | Host storage usage: 21%
+skylink-nvr-1  | Host uptime: 17 hours
+skylink-nvr-1  | 10:42:55 PM [express] GET /api/system/health 200 in 62ms :: {"id":1,"cpuUsage":"0.5","memoryUsage":"1…
+skylink-nvr-1  | Attempting to read host system stats from: /host/proc
+skylink-nvr-1  | Host memory usage: 14.5% (1.1GB used of 7.6GB total)
+skylink-nvr-1  | Host CPU usage: 0.5%
+skylink-nvr-1  | Host storage usage: 21%
+skylink-nvr-1  | Host uptime: 17 hours
+skylink-nvr-1  | 10:43:25 PM [express] GET /a

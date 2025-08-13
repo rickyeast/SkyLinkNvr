@@ -37,14 +37,14 @@ nano .env
 
 Required environment variables:
 ```env
-# Database Configuration (for host network mode)
-DATABASE_URL=postgresql://skylink:skylink_secure_pass@127.0.0.1:5432/skylink_nvr
+# Database Configuration (Docker networking)
+DATABASE_URL=postgresql://skylink:skylink_secure_pass@postgres:5432/skylink_nvr
 POSTGRES_PASSWORD=skylink_secure_pass
 
 # Production Environment
 NODE_ENV=production
 
-# Docker Host Network Configuration
+# Docker Host System Monitoring
 HOST_PROC=/host/proc
 HOST_SYS=/host/sys
 PORT=8080

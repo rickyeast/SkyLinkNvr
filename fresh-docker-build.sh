@@ -91,9 +91,21 @@ docker compose -f $COMPOSE_FILE up -d
 
 print_success "Services started"
 
-# Wait for database to be ready
+# Wait for database to be ready (with health check)
 print_status "Waiting for database to initialize..."
-sleep 15
+print_status "Checking database health..."
+for i in $(seq 1 30); do
+    if docker compose -f $COMPOSE_FILE exec -T postgres pg_isready -U skylink -d skylink_nvr > /dev/null 2>&1; then
+        print_success "Database is ready"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        print_error "Database failed to become ready after 150 seconds"
+        docker compose -f $COMPOSE_FILE logs postgres
+        exit 1
+    fi
+    sleep 5
+done
 
 # Push database schema
 print_status "Pushing database schema..."
@@ -119,19 +131,17 @@ docker compose -f $COMPOSE_FILE exec -T skylink-nvr npm run db:push 2>/dev/null 
         # Try direct SQL schema initialization as fallback
         if [ -f "init-schema.sql" ]; then
             print_status "Applying schema using SQL fallback..."
-            docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -f /docker-entrypoint-initdb.d/init-schema.sql || {
-                # Try copying the file and running it
-                docker cp init-schema.sql $(docker compose -f $COMPOSE_FILE ps -q postgres):/tmp/init-schema.sql
-                docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -f /tmp/init-schema.sql || {
-                    print_error "Both Drizzle and SQL schema initialization failed."
-                    docker compose -f $COMPOSE_FILE logs postgres | tail -20
-                    exit 1
-                }
+            # Copy the schema file to the container and execute it
+            docker cp init-schema.sql $(docker compose -f $COMPOSE_FILE ps -q postgres):/tmp/init-schema.sql
+            docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -f /tmp/init-schema.sql || {
+                print_error "SQL schema initialization failed."
+                docker compose -f $COMPOSE_FILE logs postgres | tail -20
+                exit 1
             }
             print_success "Schema initialized using SQL fallback"
         else
             print_error "Database schema push failed and no SQL fallback found."
-            docker compose -f $COMPOSE_FILE logs postgres | tail -20
+            docker compose -f $COMPOSE_FILE logs postgres | tail-20
             exit 1
         fi
     }
@@ -139,17 +149,45 @@ docker compose -f $COMPOSE_FILE exec -T skylink-nvr npm run db:push 2>/dev/null 
 
 print_success "Database schema pushed successfully"
 
+# Verify schema was actually created by checking for tables
+print_status "Verifying database schema..."
+TABLES_EXIST=$(docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('cameras', 'system_health', 'recordings', 'detections');" | tr -d ' \n\r')
+
+if [ "$TABLES_EXIST" != "4" ]; then
+    print_warning "Schema verification failed, applying SQL fallback..."
+    # Copy and run the SQL schema file
+    docker cp init-schema.sql $(docker compose -f $COMPOSE_FILE ps -q postgres):/tmp/init-schema.sql
+    docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -f /tmp/init-schema.sql
+    
+    # Verify again
+    TABLES_EXIST=$(docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('cameras', 'system_health', 'recordings', 'detections');" | tr -d ' \n\r')
+    
+    if [ "$TABLES_EXIST" = "4" ]; then
+        print_success "Schema verified and corrected using SQL fallback"
+    else
+        print_error "Schema verification still failed. Found $TABLES_EXIST/4 tables."
+        exit 1
+    fi
+else
+    print_success "Schema verified - all 4 tables present"
+fi
+
 # Wait for services to fully initialize
 print_status "Waiting for services to initialize..."
-sleep 5
+sleep 10
 
 # Check service health
 print_status "Checking service health..."
 RETRIES=30
-HEALTH_URL="http://localhost:8080/api/system/health"
-if [ "$COMPOSE_FILE" = "docker-compose.yml" ]; then
+
+# Determine the correct health URL based on network mode
+if [ "$COMPOSE_FILE" = "docker-compose.host.yml" ]; then
+    HEALTH_URL="http://localhost:8080/api/system/health"
+else
     HEALTH_URL="http://localhost:5000/api/system/health"
 fi
+
+print_status "Using health check URL: $HEALTH_URL"
 
 for i in $(seq 1 $RETRIES); do
     if curl -f $HEALTH_URL > /dev/null 2>&1; then
