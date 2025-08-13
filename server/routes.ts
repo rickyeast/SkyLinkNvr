@@ -17,7 +17,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(devices);
     } catch (error) {
       console.error("Camera discovery error:", error);
-      res.status(500).json({ error: "Failed to discover cameras", details: error?.message || String(error) });
+      res.status(500).json({ error: "Failed to discover cameras", details: (error as any)?.message || String(error) });
     }
   };
 
@@ -167,7 +167,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to test camera connection" });
+      console.error('Camera test connection error:', error);
+      res.status(500).json({ error: "Failed to test camera connection", details: (error as any)?.message || String(error) });
     }
   });
 
@@ -329,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             throw new Error('Memory parsing failed');
           }
         } catch (memError) {
-          console.log(`Host memory stats not available (${meminfoPath}), using container stats:`, memError.message);
+          console.log(`Host memory stats not available (${meminfoPath}), using container stats:`, (memError as any).message);
           // Fall back to os module
           const totalMem = os.totalmem();
           const freeMem = os.freemem();
@@ -357,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             throw new Error('Invalid CPU stats format');
           }
         } catch (cpuError) {
-          console.log(`Host CPU stats not available (${statPath}), using container stats:`, cpuError.message);
+          console.log(`Host CPU stats not available (${statPath}), using container stats:`, (cpuError as any).message);
           // Fall back to simple load average or basic calculation
           try {
             const loadavgPath = `${hostProcPath}/loadavg`;
@@ -420,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         } catch (storageError) {
-          console.log('Could not get host storage stats, using default:', storageError.message);
+          console.log('Could not get host storage stats, using default:', (storageError as any).message);
           storageUsage = "15"; // fallback
         }
         
@@ -433,12 +434,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           uptime = Math.floor(uptimeSeconds / 3600);
           console.log(`Host uptime: ${uptime} hours`);
         } catch (uptimeError) {
-          console.log(`Host uptime not available (${uptimePath}), using container uptime:`, uptimeError.message);
+          console.log(`Host uptime not available (${uptimePath}), using container uptime:`, (uptimeError as any).message);
           uptime = Math.floor(os.uptime() / 3600);
         }
         
       } catch (error) {
-        console.error("Failed to read system stats:", error.message);
+        console.error("Failed to read system stats:", (error as any).message);
         // Ensure we have some values even if everything fails
         if (cpuUsage === "0") {
           const cpus = os.cpus();
