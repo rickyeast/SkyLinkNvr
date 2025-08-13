@@ -19,6 +19,20 @@ if %errorLevel% == 0 (
     exit /b 1
 )
 
+REM Check if PowerShell script exists
+if exist "scripts\install-windows.ps1" (
+    echo Found installation script at scripts\install-windows.ps1
+    echo.
+) else (
+    echo ERROR: Installation script not found at scripts\install-windows.ps1
+    echo Please ensure you're running this from the project root directory.
+    echo Current directory: %CD%
+    echo.
+    dir scripts\ 2>nul
+    pause
+    exit /b 1
+)
+
 REM Fix PowerShell execution policy and run installation
 echo Fixing PowerShell execution policy...
 powershell -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
@@ -28,10 +42,10 @@ if %errorLevel% == 0 (
     echo.
     echo Running installation script...
     echo.
-    powershell -ExecutionPolicy Bypass -File ".\scripts\install-windows.ps1"
+    powershell -ExecutionPolicy Bypass -File "scripts\install-windows.ps1"
 ) else (
     echo Failed to set execution policy. Trying bypass method...
-    powershell -ExecutionPolicy Bypass -File ".\scripts\install-windows.ps1"
+    powershell -ExecutionPolicy Bypass -File "scripts\install-windows.ps1"
 )
 
 echo.
