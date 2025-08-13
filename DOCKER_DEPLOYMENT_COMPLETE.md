@@ -50,13 +50,25 @@ HOST_SYS=/host/sys
 PORT=8080
 ```
 
-### 3. Deploy with Host Network Mode (Recommended)
+### 3. Fresh Docker Build (Recommended)
+```bash
+# Make the script executable
+chmod +x fresh-docker-build.sh
+
+# Run fresh build with host network mode (recommended)
+./fresh-docker-build.sh
+
+# OR for bridge network mode
+./fresh-docker-build.sh bridge
+```
+
+### 4. Manual Deployment (Alternative)
 ```bash
 # Use host network mode for full camera discovery
 docker compose -f docker-compose.host.yml up -d --build
 ```
 
-### 4. Verify Deployment
+### 5. Verify Deployment
 ```bash
 # Check logs
 docker compose -f docker-compose.host.yml logs -f skylink-nvr
@@ -160,6 +172,34 @@ docker compose exec skylink-nvr npm run db:push
 docker compose exec postgres psql -U skylink -d skylink_nvr -c "\dt"
 ```
 
+## Fresh Build Script
+
+The `fresh-docker-build.sh` script provides a complete clean deployment:
+
+### Features
+- **Safe for Multi-Application Hosts**: Only removes Skylink NVR containers/images
+- **No Cache Build**: Forces complete rebuild from scratch
+- **Health Monitoring**: Waits for services and verifies deployment
+- **Network Mode Selection**: Supports both host and bridge network modes
+- **Comprehensive Logging**: Shows detailed status and troubleshooting info
+
+### Usage
+```bash
+# Host network mode (recommended for full NVR functionality)
+./fresh-docker-build.sh
+
+# Bridge network mode (security-focused, limited discovery)
+./fresh-docker-build.sh bridge
+```
+
+### What It Does
+1. Stops only Skylink NVR containers (preserves other apps)
+2. Removes only Skylink NVR Docker images
+3. Cleans Docker build cache
+4. Builds with `--no-cache --pull` for fresh dependencies
+5. Starts services and monitors health
+6. Provides deployment summary with URLs
+
 ## Troubleshooting
 
 ### Network Discovery Issues
@@ -173,10 +213,12 @@ docker compose exec postgres psql -U skylink -d skylink_nvr -c "\dt"
 3. **Run Migrations**: Execute `npm run db:push`
 
 ### Build Issues
-1. **Clean Build**: Remove containers and rebuild
+1. **Use Fresh Build Script**: Run `./fresh-docker-build.sh` for clean rebuild
+2. **Manual Clean Build**: Alternative manual approach:
    ```bash
-   docker compose down --volumes
-   docker compose up -d --build
+   docker compose -f docker-compose.host.yml down
+   docker compose -f docker-compose.host.yml build --no-cache
+   docker compose -f docker-compose.host.yml up -d
    ```
 
 ## Production Deployment
