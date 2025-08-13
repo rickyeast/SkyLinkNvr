@@ -1,4 +1,11 @@
 # Skylink Enterprise NVR - Windows Installation Script
+# 
+# EXECUTION POLICY FIX:
+# If you get execution policy errors, run one of these commands first:
+# 
+# Method 1 (Recommended): Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Method 2 (One-time): PowerShell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+#
 # Run this script as Administrator in PowerShell
 
 param(
