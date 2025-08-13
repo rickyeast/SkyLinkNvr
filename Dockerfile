@@ -58,6 +58,8 @@ WORKDIR /app
 COPY --from=build --chown=skylink:nodejs /app/dist ./dist
 COPY --from=build --chown=skylink:nodejs /app/package*.json ./
 COPY --from=build --chown=skylink:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=skylink:nodejs /app/drizzle.config.ts ./
+COPY --from=build --chown=skylink:nodejs /app/shared ./shared
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

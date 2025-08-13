@@ -1,0 +1,45 @@
+
+[+] Running 4/4
+ ✔ Network skylinknvr_skylink-network  Created                                                                                                                                                                                  0.1s
+ ✔ Container skylinknvr-redis-1        Started                                                                                                                                                                                  0.8s
+ ✔ Container skylinknvr-postgres-1     Started                                                                                                                                                                                  0.8s
+ ✔ Container skylinknvr-skylink-nvr-1  Started                                                                                                                                                                                  1.0s
+[SUCCESS] Services started
+[INFO] Waiting for database to initialize...
+[INFO] Pushing database schema...
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.json'
+/app/drizzle.config.json file does not exist
+[WARNING] Direct schema push failed, trying alternative method...
+WARN[0000] /docker/SkyLinkNvr/docker-compose.host.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.json'
+/app/drizzle.config.json file does not exist
+[ERROR] Database schema push failed. Check database connectivity.
+WARN[0000] /docker/SkyLinkNvr/docker-compose.host.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+postgres-1  |
+postgres-1  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres-1  |
+postgres-1  | 2025-08-13 22:28:37.731 UTC [1] LOG:  starting PostgreSQL 15.13 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+postgres-1  | 2025-08-13 22:28:37.731 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1  | 2025-08-13 22:28:37.732 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres-1  | 2025-08-13 22:28:37.746 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1  | 2025-08-13 22:28:37.761 UTC [29] LOG:  database system was interrupted; last known up at 2025-08-13 22:19:53 UTC
+postgres-1  | 2025-08-13 22:28:38.106 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+postgres-1  | 2025-08-13 22:28:38.114 UTC [29] LOG:  redo starts at 0/192D660
+postgres-1  | 2025-08-13 22:28:38.120 UTC [29] LOG:  invalid record length at 0/196C6E8: wanted 24, got 0
+postgres-1  | 2025-08-13 22:28:38.120 UTC [29] LOG:  redo done at 0/196C6B0 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+postgres-1  | 2025-08-13 22:28:38.130 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+postgres-1  | 2025-08-13 22:28:38.163 UTC [27] LOG:  checkpoint complete: wrote 39 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.009 s, sync=0.009 s, total=0.037 s; sync files=11, longest=0.005 s, average=0.001 s; distance=252 kB, estimate=252 kB
+postgres-1  | 2025-08-13 22:28:38.175 UTC [1] LOG:  database system is ready to accept connections
+postgres-1  | 2025-08-13 22:28:42.429 UTC [33] ERROR:  relation "cameras" does not exist at character 276
+postgres-1  | 2025-08-13 22:28:42.429 UTC [33] STATEMENT:  select "id", "name", "ip_address", "port", "username", "password", "rtsp_url", "onvif_url", "manufacturer", "model", "resolution", "fps", "codec", "status", "is_recording", "ai_detection_enabled", "ai_detection_types", "confidence_threshold", "created_at", "updated_at" from "cameras" order by "cameras"."name"
+postgres-1  | 2025-08-13 22:28:43.099 UTC [34] ERROR:  relation "system_health" does not exist at character 13
+postgres-1  | 2025-08-13 22:28:43.099 UTC [34] STATEMENT:  insert into "system_health" ("id", "cpu_usage", "memory_usage", "storage_usage", "network_in", "network_out", "timestamp") values (default, $1, $2, $3, $4, $5, default) returning "id", "cpu_usage", "memory_usage", "storage_usage", "network_in", "network_out", "timestamp"
+root@openmediavault:/docker/SkyLinkNvr#

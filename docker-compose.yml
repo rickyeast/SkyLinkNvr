@@ -1,4 +1,4 @@
-version: '3.8'
+# Removed version as it's obsolete in Docker Compose V2
 
 services:
   skylink-nvr:

@@ -1,4 +1,4 @@
-version: '3.8'
+# Removed version as it's obsolete in Docker Compose V2
 
 services:
   skylink-nvr:
@@ -34,6 +34,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./init-schema.sql:/docker-entrypoint-initdb.d/init-schema.sql:ro
     ports:
       - "5432:5432"
     restart: unless-stopped

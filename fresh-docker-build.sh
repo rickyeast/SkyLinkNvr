@@ -98,13 +98,42 @@ sleep 15
 # Push database schema
 print_status "Pushing database schema..."
 docker compose -f $COMPOSE_FILE exec -T skylink-nvr npm run db:push 2>/dev/null || {
-    print_warning "Direct schema push failed, trying alternative method..."
-    # Wait a bit more and try again
+    print_warning "Schema push failed, rebuilding container with proper config..."
+    
+    # Stop the container
+    docker compose -f $COMPOSE_FILE stop skylink-nvr
+    
+    # Rebuild just the app container to ensure drizzle.config.ts is included
+    docker compose -f $COMPOSE_FILE build --no-cache skylink-nvr
+    
+    # Restart the container
+    docker compose -f $COMPOSE_FILE up -d skylink-nvr
+    
+    # Wait for restart
     sleep 10
+    
+    # Try schema push again
     docker compose -f $COMPOSE_FILE exec -T skylink-nvr npm run db:push || {
-        print_error "Database schema push failed. Check database connectivity."
-        docker compose -f $COMPOSE_FILE logs postgres | tail -20
-        exit 1
+        print_warning "Drizzle schema push failed, using SQL fallback method..."
+        
+        # Try direct SQL schema initialization as fallback
+        if [ -f "init-schema.sql" ]; then
+            print_status "Applying schema using SQL fallback..."
+            docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -f /docker-entrypoint-initdb.d/init-schema.sql || {
+                # Try copying the file and running it
+                docker cp init-schema.sql $(docker compose -f $COMPOSE_FILE ps -q postgres):/tmp/init-schema.sql
+                docker compose -f $COMPOSE_FILE exec -T postgres psql -U skylink -d skylink_nvr -f /tmp/init-schema.sql || {
+                    print_error "Both Drizzle and SQL schema initialization failed."
+                    docker compose -f $COMPOSE_FILE logs postgres | tail -20
+                    exit 1
+                }
+            }
+            print_success "Schema initialized using SQL fallback"
+        else
+            print_error "Database schema push failed and no SQL fallback found."
+            docker compose -f $COMPOSE_FILE logs postgres | tail -20
+            exit 1
+        fi
     }
 }
 
