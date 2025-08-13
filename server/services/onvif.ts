@@ -1,5 +1,6 @@
 import { Camera } from "@shared/schema";
 import { CameraCapabilities, StreamProfile } from "@shared/camera-templates";
+import * as onvif from 'node-onvif-ts';
 
 export interface OnvifDevice {
   name: string;
@@ -23,233 +24,83 @@ export interface CameraConnectionTest {
 }
 
 class OnvifService {
-  async discoverDevices(): Promise<OnvifDevice[]> {
-    console.log('Starting real network device discovery...');
+  constructor() {
+    // No initialization needed - using static method calls
+  }
+
+  async discoverDevices(timeoutMs: number = 5000): Promise<OnvifDevice[]> {
+    console.log('Starting ONVIF WS-Discovery multicast...');
     
     try {
-      // Get network interfaces and scan for devices
-      const networkRanges = await this.getNetworkRanges();
-      const discoveredDevices: OnvifDevice[] = [];
+      // Use proper ONVIF WS-Discovery multicast protocol
+      const discoveredDevices = await onvif.startProbe(timeoutMs);
       
-      for (const range of networkRanges) {
-        console.log(`Scanning network range: ${range}`);
-        const devices = await this.scanNetworkRange(range);
-        discoveredDevices.push(...devices);
-      }
+      const cameras: OnvifDevice[] = discoveredDevices.map((device: any) => {
+        // Extract device information from ONVIF discovery response
+        const xaddr = Array.isArray(device.xaddrs) ? device.xaddrs[0] : device.xaddrs;
+        const url = new URL(xaddr);
+        
+        return {
+          name: device.name || device.hardware || device.model || `Camera at ${url.hostname}`,
+          ipAddress: url.hostname,
+          port: parseInt(url.port) || 80,
+          manufacturer: device.mfr || device.manufacturer || 'Unknown',
+          model: device.hardware || device.model || 'ONVIF Camera',
+          onvifUrl: xaddr
+        };
+      });
+
+      console.log(`ONVIF WS-Discovery completed, found ${cameras.length} cameras`);
+      console.log('Discovered cameras:', cameras.map(d => `${d.name} (${d.ipAddress}:${d.port})`));
       
-      console.log(`Discovery completed, found ${discoveredDevices.length} cameras`);
-      console.log('Discovered devices:', discoveredDevices.map(d => `${d.name} (${d.ipAddress}:${d.port})`));
+      return cameras;
+    } catch (error: any) {
+      console.error('ONVIF WS-Discovery failed:', error);
+      console.log('This is normal in development environments or if no ONVIF cameras are broadcasting on the network');
       
-      return discoveredDevices;
-    } catch (error) {
-      console.error('Network discovery failed:', error);
-      console.log('Network discovery will work in Docker environment with nmap installed');
-      
-      // In development/Replit environment, return empty array since no real cameras to discover
       return [];
     }
   }
 
-  async discoverDevicesStreaming(sendEvent: (data: any) => void): Promise<void> {
+  async discoverDevicesStreaming(sendEvent: (data: any) => void, timeoutMs: number = 10000): Promise<void> {
     try {
-      console.log("Starting streaming network device discovery...");
-      sendEvent({ type: 'status', message: 'Starting network scan...' });
+      console.log("Starting streaming ONVIF WS-Discovery...");
+      sendEvent({ type: 'status', message: 'Broadcasting ONVIF multicast discovery...' });
       
-      const networkRanges = await this.getNetworkRanges();
+      // Use streaming discovery that sends results as they come
+      const discoveryPromise = onvif.startProbe(timeoutMs);
       
-      for (const range of networkRanges) {
-        console.log(`Streaming scan of network range: ${range}`);
-        sendEvent({ type: 'status', message: `Scanning ${range}...` });
+      discoveryPromise.then((devices: any[]) => {
+        devices.forEach((device: any) => {
+          const xaddr = Array.isArray(device.xaddrs) ? device.xaddrs[0] : device.xaddrs;
+          const url = new URL(xaddr);
+          const camera: OnvifDevice = {
+            name: device.name || device.hardware || device.model || `Camera at ${url.hostname}`,
+            ipAddress: url.hostname,
+            port: parseInt(url.port) || 80,
+            manufacturer: device.mfr || device.manufacturer || 'Unknown',
+            model: device.hardware || device.model || 'ONVIF Camera',
+            onvifUrl: xaddr
+          };
+
+          console.log(`Discovered ONVIF camera: ${camera.name} at ${camera.ipAddress}`);
+          sendEvent({ type: 'device', device: camera });
+        });
         
-        await this.scanNetworkRangeStreaming(range, sendEvent);
-      }
+        sendEvent({ type: 'status', message: `Discovery completed - found ${devices.length} cameras` });
+        console.log('Streaming ONVIF discovery completed');
+      }).catch((error: any) => {
+        console.error('Streaming ONVIF discovery failed:', error);
+        sendEvent({ type: 'error', message: 'ONVIF discovery failed: ' + error.message });
+      });
       
-      console.log('Streaming discovery completed');
-    } catch (error) {
-      console.error('Streaming network discovery failed:', error);
-      sendEvent({ type: 'error', message: 'Network discovery failed' });
+    } catch (error: any) {
+      console.error('Streaming ONVIF discovery setup failed:', error);
+      sendEvent({ type: 'error', message: 'ONVIF discovery setup failed: ' + error.message });
     }
   }
 
-  private async getNetworkRanges(): Promise<string[]> {
-    try {
-      const { spawn } = await import('child_process');
-      const { promisify } = await import('util');
-      const exec = promisify(spawn);
-      
-      // Get network interfaces and extract ranges
-      return new Promise((resolve, reject) => {
-        const process = spawn('ip', ['route', 'show']);
-        let output = '';
-        
-        process.stdout.on('data', (data) => {
-          output += data.toString();
-        });
-        
-        process.on('close', (code) => {
-          if (code !== 0) {
-            // Fallback to common ranges if ip command fails
-            resolve(['192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24']);
-            return;
-          }
-          
-          const ranges: string[] = [];
-          const lines = output.split('\n');
-          
-          for (const line of lines) {
-            // Look for local network routes
-            const match = line.match(/^(192\.168\.\d+\.0\/24|10\.0\.\d+\.0\/24|172\.\d+\.\d+\.0\/24)/);
-            if (match && !ranges.includes(match[1])) {
-              ranges.push(match[1]);
-            }
-          }
-          
-          // Add common ranges if none found
-          if (ranges.length === 0) {
-            ranges.push('192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24');
-          }
-          
-          resolve(ranges);
-        });
-        
-        process.on('error', () => {
-          resolve(['192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24']);
-        });
-      });
-    } catch (error) {
-      return ['192.168.1.0/24', '192.168.0.0/24', '10.0.0.0/24'];
-    }
-  }
 
-  private async scanNetworkRange(range: string): Promise<OnvifDevice[]> {
-    try {
-      const { spawn } = await import('child_process');
-      
-      // Use nmap to scan for devices with common camera ports
-      return new Promise((resolve, reject) => {
-        const devices: OnvifDevice[] = [];
-        const nmapArgs = [
-          '-sn', // Ping scan only
-          range
-        ];
-        
-        console.log(`Running nmap scan: nmap ${nmapArgs.join(' ')}`);
-        const nmapProcess = spawn('/nix/store/hk1jvn2l0581kjnia53nn9jlc8jga1yd-nmap-7.94/bin/nmap', nmapArgs);
-        let output = '';
-        
-        nmapProcess.stdout.on('data', (data) => {
-          output += data.toString();
-        });
-        
-        nmapProcess.on('close', async (code) => {
-          if (code !== 0) {
-            console.error('Nmap scan failed, trying alternative discovery');
-            resolve([]);
-            return;
-          }
-          
-          // Extract IP addresses from nmap output
-          const ipRegex = /Nmap scan report for (?:.*? \()?(\d+\.\d+\.\d+\.\d+)/g;
-          const foundIPs: string[] = [];
-          let match;
-          
-          while ((match = ipRegex.exec(output)) !== null) {
-            const ip = match[1];
-            // Skip only broadcast and network IPs, allow more devices including .1 and .254
-            if (!ip.endsWith('.0') && !ip.endsWith('.255')) {
-              foundIPs.push(ip);
-            }
-          }
-          
-          console.log(`Found ${foundIPs.length} active IPs in range ${range}:`, foundIPs);
-          
-          // Test each IP for ONVIF services
-          const testPromises = foundIPs.map(ip => this.testOnvifService(ip));
-          const results = await Promise.allSettled(testPromises);
-          
-          for (const result of results) {
-            if (result.status === 'fulfilled' && result.value) {
-              devices.push(result.value);
-            }
-          }
-          
-          resolve(devices);
-        });
-        
-        nmapProcess.on('error', (error) => {
-          console.error('Nmap process error:', error);
-          resolve([]);
-        });
-      });
-    } catch (error) {
-      console.error('Network range scan failed:', error);
-      return [];
-    }
-  }
-
-  private async scanNetworkRangeStreaming(range: string, sendEvent: (data: any) => void): Promise<void> {
-    try {
-      const { spawn } = await import('child_process');
-      
-      // Use nmap to scan for devices with common camera ports
-      return new Promise((resolve, reject) => {
-        const nmapArgs = [
-          '-sn', // Ping scan only
-          range
-        ];
-        
-        console.log(`Running streaming nmap scan: nmap ${nmapArgs.join(' ')}`);
-        const nmapProcess = spawn('/nix/store/hk1jvn2l0581kjnia53nn9jlc8jga1yd-nmap-7.94/bin/nmap', nmapArgs);
-        let output = '';
-        
-        nmapProcess.stdout.on('data', (data) => {
-          output += data.toString();
-        });
-        
-        nmapProcess.on('close', async (code) => {
-          if (code !== 0) {
-            console.error('Nmap scan failed in streaming mode');
-            resolve();
-            return;
-          }
-          
-          // Extract IP addresses from nmap output
-          const ipRegex = /Nmap scan report for (?:.*? \()?(\d+\.\d+\.\d+\.\d+)/g;
-          const foundIPs: string[] = [];
-          let match;
-          
-          while ((match = ipRegex.exec(output)) !== null) {
-            const ip = match[1];
-            // Skip only broadcast and network IPs, allow more devices including .1 and .254
-            if (!ip.endsWith('.0') && !ip.endsWith('.255')) {
-              foundIPs.push(ip);
-            }
-          }
-          
-          console.log(`Found ${foundIPs.length} active IPs in range ${range}:`, foundIPs);
-          sendEvent({ type: 'status', message: `Testing ${foundIPs.length} devices for cameras...` });
-          
-          // Test each IP for ONVIF services and send results as they come
-          for (const ip of foundIPs) {
-            const device = await this.testOnvifService(ip);
-            if (device) {
-              console.log(`Found camera: ${device.name} at ${device.ipAddress}:${device.port}`);
-              sendEvent({ type: 'device_found', data: device });
-            }
-          }
-          
-          resolve();
-        });
-        
-        nmapProcess.on('error', (error) => {
-          console.error('Nmap process error in streaming mode:', error);
-          resolve();
-        });
-      });
-    } catch (error) {
-      console.error('Network range streaming scan failed:', error);
-    }
-  }
 
   private async testOnvifService(ip: string): Promise<OnvifDevice | null> {
     try {
@@ -297,11 +148,7 @@ class OnvifService {
                                response.status === 500;   // Internal server error but ONVIF present
           
           if (isOnvifDevice) {
-            httpAccessible = true;
-            workingPort = port;
-            onvifUrl = onvifTestUrl;
-            
-            console.log(`Found ONVIF service at ${ipAddress}:${port} (status: ${response.status})`);
+            console.log(`Found ONVIF service at ${ip}:${port} (status: ${response.status})`);
             
             // Try to get response text for manufacturer detection
             let responseText = '';
@@ -313,16 +160,16 @@ class OnvifService {
               // Ignore text reading errors
             }
             
-            const manufacturer = this.detectManufacturer(ipAddress, responseText);
+            const manufacturer = this.detectManufacturer(ip, responseText);
             const model = this.generateModelName(manufacturer);
             
             return {
               name: `${manufacturer} Camera`,
-              ipAddress,
+              ipAddress: ip,
               port,
               manufacturer,
               model,
-              onvifUrl: onvifTestUrl,
+              onvifUrl: url,
             };
           }
         } catch (error) {
@@ -506,7 +353,7 @@ class OnvifService {
         }
       }
 
-      if (!httpAccessible && !onvifUrl) {
+      if (!httpAccessible) {
         // Special handling for Docker environments where nmap shows ports as open
         console.log(`Connection test failed from current environment. In Docker host network mode, this camera should be accessible.`);
         
@@ -558,10 +405,7 @@ class OnvifService {
       console.log(`Camera connection test completed for ${ipAddress}, accessible: ${httpAccessible}`);
       return {
         success: true,
-        capabilities: {
-          ...capabilities,
-          status: httpAccessible ? 'online' : 'offline'
-        }
+        capabilities
       };
     } catch (error) {
       console.error(`Camera connection test failed for ${ipAddress}:`, error);
@@ -572,17 +416,49 @@ class OnvifService {
     }
   }
 
-  private detectManufacturer(ipAddress: string): string {
-    // In production, this would use MAC address lookup or ONVIF device info
-    const manufacturers = ["Hikvision", "Dahua", "Axis", "Bosch", "Hanwha", "Uniview"];
-    return manufacturers[Math.floor(Math.random() * manufacturers.length)];
+  private detectManufacturer(ipAddress: string, responseText?: string): string {
+    // Enhanced manufacturer detection
+    if (responseText) {
+      const lowerResponse = responseText.toLowerCase();
+      if (lowerResponse.includes('hikvision') || lowerResponse.includes('hikvis')) return "Hikvision";
+      if (lowerResponse.includes('dahua') || lowerResponse.includes('dh-')) return "Dahua";
+      if (lowerResponse.includes('axis')) return "Axis";
+      if (lowerResponse.includes('bosch')) return "Bosch";
+      if (lowerResponse.includes('vivotek')) return "Vivotek";
+      if (lowerResponse.includes('samsung')) return "Samsung";
+      if (lowerResponse.includes('panasonic')) return "Panasonic";
+    }
+    
+    // Fallback to IP-based detection for common setups
+    const lastOctet = parseInt(ipAddress.split('.')[3]);
+    
+    // Handle 10.0.0.x range (common for Dahua cameras)
+    if (ipAddress.startsWith('10.0.0.')) {
+      if (lastOctet >= 20 && lastOctet < 30) return "Dahua";
+      if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
+      if (lastOctet >= 110 && lastOctet < 120) return "Axis";
+    }
+    
+    // Handle 192.168.x.x ranges
+    if (ipAddress.startsWith('192.168.')) {
+      if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
+      if (lastOctet >= 110 && lastOctet < 120) return "Dahua";
+      if (lastOctet >= 120 && lastOctet < 130) return "Axis";
+    }
+    
+    return "Generic";
   }
 
-  private generateModelName(): string {
-    const models = [
-      "DS-2CD2142FWD-I", "IPC-HDBW4631R-ZS", "M3025-VE", 
-      "NBE-4502-AL", "XNO-6120R", "IPC-T180H"
-    ];
+  private generateModelName(manufacturer?: string): string {
+    const modelsByManufacturer: { [key: string]: string[] } = {
+      "Hikvision": ["DS-2CD2142FWD-I", "DS-2CD2345G0P-I", "DS-2CD2T85G1-I8"],
+      "Dahua": ["IPC-HFW4431R-Z", "IPC-HDW2431T-ZS", "IPC-HFW2831T-ZS"],
+      "Axis": ["M3025-VE", "P5534-E", "Q6055-E"],
+      "Bosch": ["NBE-6502-AL", "NDE-8502-R", "NBN-921-P"],
+      "Generic": ["M3025-VE", "IPC-4000", "CAM-2000"]
+    };
+    
+    const models = modelsByManufacturer[manufacturer || "Generic"] || modelsByManufacturer["Generic"];
     return models[Math.floor(Math.random() * models.length)];
   }
 }

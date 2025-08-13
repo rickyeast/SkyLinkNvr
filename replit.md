@@ -16,7 +16,7 @@ Core components include:
 - **API Architecture**: RESTful endpoints, WebSocket for real-time, CORS support, token-based authentication.
 - **Backend Architecture**: Node.js/Express.js, TypeScript/ES modules, Drizzle ORM, Neon Database.
 - **Database Schema**: Manages Users, Cameras (ONVIF, streaming, AI prefs), Recordings, AI Detections, and System Health.
-- **Camera Management**: ONVIF integration for discovery, connection testing, and RTSP stream handling.
+- **Camera Management**: True ONVIF WS-Discovery multicast protocol using node-onvif-ts library for standards-compliant camera detection, connection testing, and RTSP stream handling.
 - **AI Detection Service**: Real-time AI analysis with configurable types and confidence thresholds, event logging.
 - **UI/UX Decisions (Reference Frontend)**: Uses Radix UI, Tailwind CSS, and Lucide React for a structured and accessible design. Features include live view grid, timeline-based recording playback, device setup wizard, AI detection dashboard, and system health monitoring.
 - **Data Flow**: Automated camera discovery, registration, stream initialization, continuous recording, real-time AI processing, event storage, and frontend updates.
