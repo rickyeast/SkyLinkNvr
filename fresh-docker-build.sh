@@ -39,9 +39,9 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check if docker-compose is available
-if ! command -v docker &> /dev/null; then
-    print_error "docker command not found. Please install Docker."
+# Check if docker compose is available
+if ! docker compose version &> /dev/null; then
+    print_error "docker compose not available. Please install Docker Compose V2."
     exit 1
 fi
 
