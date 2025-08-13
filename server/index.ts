@@ -56,7 +56,7 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Serve the app on configurable port (default 5000 for Replit, 8080 for Docker host network)
+  // Serve the app on configurable port (default 5000 for development, 8080 for Docker host network)
   // this serves both the API and the client.
   const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
   server.listen({

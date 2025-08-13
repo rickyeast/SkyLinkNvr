@@ -33,7 +33,7 @@ class OnvifService {
     
     try {
       // Use proper ONVIF WS-Discovery multicast protocol
-      const discoveredDevices = await onvif.startProbe(timeoutMs);
+      const discoveredDevices = await onvif.startProbe();
       
       const cameras: OnvifDevice[] = discoveredDevices.map((device: any) => {
         // Extract device information from ONVIF discovery response
@@ -68,7 +68,7 @@ class OnvifService {
       sendEvent({ type: 'status', message: 'Broadcasting ONVIF multicast discovery...' });
       
       // Use streaming discovery that sends results as they come
-      const discoveryPromise = onvif.startProbe(timeoutMs);
+      const discoveryPromise = onvif.startProbe();
       
       discoveryPromise.then((devices: any[]) => {
         devices.forEach((device: any) => {
@@ -272,7 +272,7 @@ class OnvifService {
       "Generic": ["M3025-VE", "IPC-4000", "CAM-2000"]
     };
     
-    const models = modelsByManufacturer[manufacturer || "Generic"] || modelsByManufacturer["Generic"];
+    const models = (modelsByManufacturer as any)[manufacturer || "Generic"] || modelsByManufacturer["Generic"];
     return models[Math.floor(Math.random() * models.length)];
   }
 
@@ -349,7 +349,7 @@ class OnvifService {
             break;
           }
         } catch (error) {
-          console.log(`Port ${port} connection failed: ${error?.message || 'Connection failed'}`);
+          console.log(`Port ${port} connection failed: ${(error as any)?.message || 'Connection failed'}`);
         }
       }
 
@@ -411,56 +411,12 @@ class OnvifService {
       console.error(`Camera connection test failed for ${ipAddress}:`, error);
       return {
         success: false,
-        error: `Connection failed: ${error?.message || String(error)}`
+        error: `Connection failed: ${(error as any)?.message || String(error)}`
       };
     }
   }
 
-  private detectManufacturer(ipAddress: string, responseText?: string): string {
-    // Enhanced manufacturer detection
-    if (responseText) {
-      const lowerResponse = responseText.toLowerCase();
-      if (lowerResponse.includes('hikvision') || lowerResponse.includes('hikvis')) return "Hikvision";
-      if (lowerResponse.includes('dahua') || lowerResponse.includes('dh-')) return "Dahua";
-      if (lowerResponse.includes('axis')) return "Axis";
-      if (lowerResponse.includes('bosch')) return "Bosch";
-      if (lowerResponse.includes('vivotek')) return "Vivotek";
-      if (lowerResponse.includes('samsung')) return "Samsung";
-      if (lowerResponse.includes('panasonic')) return "Panasonic";
-    }
-    
-    // Fallback to IP-based detection for common setups
-    const lastOctet = parseInt(ipAddress.split('.')[3]);
-    
-    // Handle 10.0.0.x range (common for Dahua cameras)
-    if (ipAddress.startsWith('10.0.0.')) {
-      if (lastOctet >= 20 && lastOctet < 30) return "Dahua";
-      if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
-      if (lastOctet >= 110 && lastOctet < 120) return "Axis";
-    }
-    
-    // Handle 192.168.x.x ranges
-    if (ipAddress.startsWith('192.168.')) {
-      if (lastOctet >= 100 && lastOctet < 110) return "Hikvision";
-      if (lastOctet >= 110 && lastOctet < 120) return "Dahua";
-      if (lastOctet >= 120 && lastOctet < 130) return "Axis";
-    }
-    
-    return "Generic";
-  }
 
-  private generateModelName(manufacturer?: string): string {
-    const modelsByManufacturer: { [key: string]: string[] } = {
-      "Hikvision": ["DS-2CD2142FWD-I", "DS-2CD2345G0P-I", "DS-2CD2T85G1-I8"],
-      "Dahua": ["IPC-HFW4431R-Z", "IPC-HDW2431T-ZS", "IPC-HFW2831T-ZS"],
-      "Axis": ["M3025-VE", "P5534-E", "Q6055-E"],
-      "Bosch": ["NBE-6502-AL", "NDE-8502-R", "NBN-921-P"],
-      "Generic": ["M3025-VE", "IPC-4000", "CAM-2000"]
-    };
-    
-    const models = modelsByManufacturer[manufacturer || "Generic"] || modelsByManufacturer["Generic"];
-    return models[Math.floor(Math.random() * models.length)];
-  }
 }
 
 export const onvifService = new OnvifService();
