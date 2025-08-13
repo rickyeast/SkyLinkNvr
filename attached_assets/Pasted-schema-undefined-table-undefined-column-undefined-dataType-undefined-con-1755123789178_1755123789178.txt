@@ -1,0 +1,199 @@
+schema: undefined,
+
+  table: undefined,
+
+  column: undefined,
+
+  dataType: undefined,
+
+  constraint: undefined,
+
+  file: 'parse_relation.c',
+
+  line: '1392',
+
+  routine: 'parserOpenTable'
+
+}
+
+10:19:55 PM [express] GET /api/system/health 500 in 96ms :: {"error":"Failed to fetch system health"}
+
+Attempting to read host system stats from: /host/proc
+
+Host memory usage: 14.2% (1.1GB used of 7.6GB total)
+
+Host CPU usage: 0.5%
+
+Host storage usage: 26%
+
+Host uptime: 17 hours
+
+System health error: error: relation "system_health" does not exist
+
+    at /app/node_modules/pg-pool/index.js:45:11
+
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+
+    at async DatabaseStorage.createSystemHealth (file:///app/dist/index.js:349:25)
+
+    at async file:///app/dist/index.js:1461:7 {
+
+  length: 112,
+
+  severity: 'ERROR',
+
+  code: '42P01',
+
+  detail: undefined,
+
+  hint: undefined,
+
+  position: '13',
+
+  internalPosition: undefined,
+
+  internalQuery: undefined,
+
+  where: undefined,
+
+  schema: undefined,
+
+  table: undefined,
+
+  column: undefined,
+
+  dataType: undefined,
+
+  constraint: undefined,
+
+  file: 'parse_relation.c',
+
+  line: '1392',
+
+  routine: 'parserOpenTable'
+
+}
+
+10:20:25 PM [express] GET /api/system/health 500 in 78ms :: {"error":"Failed to fetch system health"}
+
+Attempting to read host system stats from: /host/proc
+
+Host memory usage: 14.2% (1.1GB used of 7.6GB total)
+
+Host CPU usage: 0.5%
+
+Host storage usage: 26%
+
+Host uptime: 17 hours
+
+System health error: error: relation "system_health" does not exist
+
+    at /app/node_modules/pg-pool/index.js:45:11
+
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+
+    at async DatabaseStorage.createSystemHealth (file:///app/dist/index.js:349:25)
+
+    at async file:///app/dist/index.js:1461:7 {
+
+  length: 112,
+
+  severity: 'ERROR',
+
+  code: '42P01',
+
+  detail: undefined,
+
+  hint: undefined,
+
+  position: '13',
+
+  internalPosition: undefined,
+
+  internalQuery: undefined,
+
+  where: undefined,
+
+  schema: undefined,
+
+  table: undefined,
+
+  column: undefined,
+
+  dataType: undefined,
+
+  constraint: undefined,
+
+  file: 'parse_relation.c',
+
+  line: '1392',
+
+  routine: 'parserOpenTable'
+
+}
+
+10:20:55 PM [express] GET /api/system/health 500 in 59ms :: {"error":"Failed to fetch system health"}
+
+Attempting to read host system stats from: /host/proc
+
+Host memory usage: 14.1% (1.1GB used of 7.6GB total)
+
+Host CPU usage: 0.5%
+
+Host storage usage: 26%
+
+Host uptime: 17 hours
+
+System health error: error: relation "system_health" does not exist
+
+    at /app/node_modules/pg-pool/index.js:45:11
+
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+
+    at async DatabaseStorage.createSystemHealth (file:///app/dist/index.js:349:25)
+
+    at async file:///app/dist/index.js:1461:7 {
+
+  length: 112,
+
+  severity: 'ERROR',
+
+  code: '42P01',
+
+  detail: undefined,
+
+  hint: undefined,
+
+  position: '13',
+
+  internalPosition: undefined,
+
+  internalQuery: undefined,
+
+  where: undefined,
+
+  schema: undefined,
+
+  table: undefined,
+
+  column: undefined,
+
+  dataType: undefined,
+
+  constraint: undefined,
+
+  file: 'parse_relation.c',
+
+  line: '1392',
+
+  routine: 'parserOpenTable'
+
+}
+
+10:21:25 PM [express] GET /api/system/health 500 in 68ms :: {"error":"Failed to fetch system health"}

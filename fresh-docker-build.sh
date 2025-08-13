@@ -91,9 +91,28 @@ docker compose -f $COMPOSE_FILE up -d
 
 print_success "Services started"
 
-# Wait for services to initialize
+# Wait for database to be ready
+print_status "Waiting for database to initialize..."
+sleep 15
+
+# Push database schema
+print_status "Pushing database schema..."
+docker compose -f $COMPOSE_FILE exec -T skylink-nvr npm run db:push 2>/dev/null || {
+    print_warning "Direct schema push failed, trying alternative method..."
+    # Wait a bit more and try again
+    sleep 10
+    docker compose -f $COMPOSE_FILE exec -T skylink-nvr npm run db:push || {
+        print_error "Database schema push failed. Check database connectivity."
+        docker compose -f $COMPOSE_FILE logs postgres | tail -20
+        exit 1
+    }
+}
+
+print_success "Database schema pushed successfully"
+
+# Wait for services to fully initialize
 print_status "Waiting for services to initialize..."
-sleep 10
+sleep 5
 
 # Check service health
 print_status "Checking service health..."

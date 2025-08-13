@@ -197,8 +197,10 @@ The `fresh-docker-build.sh` script provides a complete clean deployment:
 2. Removes only Skylink NVR Docker images
 3. Cleans Docker build cache
 4. Builds with `--no-cache --pull` for fresh dependencies
-5. Starts services and monitors health
-6. Provides deployment summary with URLs
+5. Starts services and waits for database
+6. **Automatically pushes database schema** (creates all tables)
+7. Monitors health and verifies deployment
+8. Provides deployment summary with URLs
 
 ## Troubleshooting
 
@@ -208,9 +210,16 @@ The `fresh-docker-build.sh` script provides a complete clean deployment:
 3. **Network Connectivity**: Test camera access from Docker host
 
 ### Database Connection Issues
-1. **Check DATABASE_URL**: Ensure correct host and credentials
-2. **Verify PostgreSQL**: Check if database service is running
-3. **Run Migrations**: Execute `npm run db:push`
+1. **Schema Not Created**: The fresh build script automatically runs `npm run db:push`
+2. **"system_health" table missing**: Run database schema push manually:
+   ```bash
+   docker compose -f docker-compose.host.yml exec skylink-nvr npm run db:push
+   ```
+3. **Check DATABASE_URL**: Ensure correct host and credentials
+4. **Verify PostgreSQL**: Check if database service is running:
+   ```bash
+   docker compose -f docker-compose.host.yml logs postgres
+   ```
 
 ### Build Issues
 1. **Use Fresh Build Script**: Run `./fresh-docker-build.sh` for clean rebuild
